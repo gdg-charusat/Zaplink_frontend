@@ -1,12 +1,16 @@
-import { Button } from "./components/ui/button"
+import { Route, Routes } from "react-router-dom"
+import Home from "./components/Home"
+import UploadPage from "./components/UploadPage"
+import Customize from "./components/Customize"
 
 function App() {
 
   return (
-    <>
-      hello
-      <Button>H</Button>
-    </>
+    <Routes>
+      <Route path='/' element={<Home />}></Route>
+      <Route path='/upload' element={<UploadPage />}></Route>
+      <Route path='/customize' element={<Customize />}></Route>
+    </Routes>
   )
 }
 
