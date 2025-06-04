@@ -1,5 +1,5 @@
-import React, { useState, useRef } from "react"
-import { Link } from "react-router-dom"
+import React, { useState, useRef, useEffect } from "react"
+import { Link, useLocation } from "react-router-dom"
 import { ArrowLeft, Upload, Download, Copy, Share2 } from "lucide-react"
 import { QRCodeSVG } from "qrcode.react"
 import { cn } from "../lib/utils"
@@ -17,16 +17,29 @@ import { toast } from "sonner"
 
 type FrameOption = "none" | "rounded" | "circle" | "shadow"
 type PatternOption = "squares" | "dots" | "rounded"
+type CustomizePageState = {
+  zapId: string;
+  shortUrl: string;
+  qrCode: string;
+  type: string;
+  name: string;
+};
+
 
 export default function CustomizePage() {
+  const location = useLocation();
+  const state = location.state as CustomizePageState || null;
+
   const [frameStyle, setFrameStyle] = useState<FrameOption>("none")
   const [patternStyle, setPatternStyle] = useState<PatternOption>("squares")
   const [logo, setLogo] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Example QR code value
-  const qrValue = "https://qrcreate.example.com/demo123"
-
+  const qrValue = state?.shortUrl || "https://qrcreate.example.com/demo123"
+  useEffect(() => {
+    console.log(state)
+  },[state])
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return

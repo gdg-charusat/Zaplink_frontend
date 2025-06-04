@@ -1,74 +1,123 @@
-import React, { useState, useCallback } from "react"
-import { useNavigate, Link } from "react-router-dom"
-import { ArrowLeft, Upload, FileIcon, X } from "lucide-react"
-import { Input } from "./ui/input"
-import { Label } from "./ui/label"
-import { Checkbox } from "./ui/checkbox"
-import { RadioGroup, RadioGroupItem } from "./ui/radio-group"
-import { Button } from "./ui/button"
-import { cn } from "../lib/utils"
+import React, { useState, useCallback } from "react";
+import { useNavigate, Link, useLocation } from "react-router-dom";
+import { ArrowLeft, Upload, FileIcon, X, Loader2 } from "lucide-react";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Checkbox } from "./ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
+import { Button } from "./ui/button";
+import { cn } from "../lib/utils";
+import { toast } from "sonner";
+import axios, { AxiosError } from "axios";
 
 export default function UploadPage() {
-  const navigate = useNavigate()
-  const [qrName, setQrName] = useState("")
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null)
-  const [isDragOver, setIsDragOver] = useState(false)
-  const [passwordProtect, setPasswordProtect] = useState(false)
-  const [password, setPassword] = useState("")
-  const [selfDestruct, setSelfDestruct] = useState(false)
-  const [destructType, setDestructType] = useState("views")
-  const [destructValue, setDestructValue] = useState("")
+  const location = useLocation();
+  const { type } = location.state || {};
+
+  const navigate = useNavigate();
+  const [qrName, setQrName] = useState("");
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [passwordProtect, setPasswordProtect] = useState(false);
+  const [password, setPassword] = useState("");
+  const [selfDestruct, setSelfDestruct] = useState(false);
+  const [destructType, setDestructType] = useState("views");
+  const [destructValue, setDestructValue] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragOver(true)
-  }, [])
+    e.preventDefault();
+    setIsDragOver(true);
+  }, []);
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragOver(false)
-  }, [])
+    e.preventDefault();
+    setIsDragOver(false);
+  }, []);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault()
-    setIsDragOver(false)
+    e.preventDefault();
+    setIsDragOver(false);
 
-    const files = Array.from(e.dataTransfer.files)
+    const files = Array.from(e.dataTransfer.files);
     if (files.length > 0) {
-      setUploadedFile(files[0])
+      setUploadedFile(files[0]);
     }
-  }, [])
+  }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
+    const files = e.target.files;
     if (files && files.length > 0) {
-      setUploadedFile(files[0])
+      setUploadedFile(files[0]);
     }
-  }
+  };
 
   const removeFile = () => {
-    setUploadedFile(null)
-  }
+    setUploadedFile(null);
+  };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes"
-    const k = 1024
-    const sizes = ["Bytes", "KB", "MB", "GB"]
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
-  }
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return (
+      Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
+    );
+  };
 
   const canGenerate =
     qrName.trim() &&
     uploadedFile &&
     (!passwordProtect || password.trim()) &&
-    (!selfDestruct || destructValue.trim())
+    (!selfDestruct || destructValue.trim());
 
-  const handleGenerateAndContinue = () => {
-    // In a real app, you would handle the file upload here
-    // For now, we'll just navigate to the customize page
-    navigate("/customize")
-  }
+  // type ZapResponse = {
+  //   zapId: string;
+  //   shortUrl: string;
+  //   qrCode: string;
+  //   type: string;
+  //   name: string;
+  // };
+
+  const handleGenerateAndContinue = async () => {
+    if (!uploadedFile || !qrName || !type) {
+      toast.error("Missing required fields");
+      return;
+    }
+    const formData = new FormData();
+    formData.append("file", uploadedFile);
+    formData.append("name", qrName);
+    formData.append("type", type.toUpperCase());
+    if (password) formData.append("password", password);
+    if (destructType) formData.append("destructType", destructType);
+    if (destructValue) formData.append("destructValue", destructValue);
+    try {
+      setLoading(true);
+      const response = await axios.post(
+        "http://localhost:3000/api/zaps/upload",
+        formData
+      );
+      const { data } = response.data;
+
+      navigate("/customize", {
+        state: {
+          zapId: data.zapId,
+          shortUrl: data.shortUrl,
+          qrCode: data.qrCode,
+          type: data.type.toUpperCase(),
+          name: data.name,
+        },
+      });
+    } catch (error: unknown) {
+      const err = error as AxiosError<{ message: string }>;
+      toast.error(
+        `Upload failed: ${err.response?.data?.message || err.message}`
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -94,7 +143,9 @@ export default function UploadPage() {
         <div className="bg-white rounded-xl shadow-lg p-8 space-y-8">
           {/* Step Indicator */}
           <div className="flex items-center justify-between">
-            <span className="text-sm text-blue-600 font-medium">Step 2 of 3</span>
+            <span className="text-sm text-blue-600 font-medium">
+              Step 2 of 3
+            </span>
             <div className="flex-1 mx-4 h-0.5 bg-gray-200">
               <div className="h-0.5 bg-blue-600 w-2/3" />
             </div>
@@ -103,7 +154,10 @@ export default function UploadPage() {
 
           {/* QR Code Name */}
           <div className="space-y-2">
-            <Label htmlFor="qr-name" className="text-base font-medium text-gray-700">
+            <Label
+              htmlFor="qr-name"
+              className="text-base font-medium text-gray-700"
+            >
               Name your QR Code
             </Label>
             <Input
@@ -152,7 +206,9 @@ export default function UploadPage() {
               <div className="border rounded-lg p-4 flex items-center gap-4 bg-gray-100">
                 <FileIcon className="h-8 w-8 text-gray-600" />
                 <div className="flex-1">
-                  <p className="font-medium text-gray-800">{uploadedFile.name}</p>
+                  <p className="font-medium text-gray-800">
+                    {uploadedFile.name}
+                  </p>
                   <p className="text-sm text-gray-500">
                     {formatFileSize(uploadedFile.size)}
                   </p>
@@ -171,7 +227,9 @@ export default function UploadPage() {
 
           {/* Optional Settings */}
           <div className="space-y-6">
-            <h3 className="text-lg font-semibold text-gray-800">Optional Settings</h3>
+            <h3 className="text-lg font-semibold text-gray-800">
+              Optional Settings
+            </h3>
 
             {/* Password Protection */}
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
@@ -180,11 +238,14 @@ export default function UploadPage() {
                   id="password-protect"
                   checked={passwordProtect}
                   onCheckedChange={(checked) => {
-                    setPasswordProtect(checked as boolean)
-                    if (!checked) setPassword("")
+                    setPasswordProtect(checked as boolean);
+                    if (!checked) setPassword("");
                   }}
                 />
-                <Label htmlFor="password-protect" className="text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="password-protect"
+                  className="text-sm font-medium text-gray-700"
+                >
                   Password protect QR code
                 </Label>
               </div>
@@ -206,11 +267,14 @@ export default function UploadPage() {
                   id="self-destruct"
                   checked={selfDestruct}
                   onCheckedChange={(checked) => {
-                    setSelfDestruct(checked as boolean)
-                    if (!checked) setDestructValue("")
+                    setSelfDestruct(checked as boolean);
+                    if (!checked) setDestructValue("");
                   }}
                 />
-                <Label htmlFor="self-destruct" className="text-sm font-medium text-gray-700">
+                <Label
+                  htmlFor="self-destruct"
+                  className="text-sm font-medium text-gray-700"
+                >
                   Self-destruct
                 </Label>
               </div>
@@ -231,7 +295,8 @@ export default function UploadPage() {
                         placeholder="0"
                         value={destructType === "views" ? destructValue : ""}
                         onChange={(e) => {
-                          if (destructType === "views") setDestructValue(e.target.value)
+                          if (destructType === "views")
+                            setDestructValue(e.target.value);
                         }}
                         className="w-20 h-8 text-sm rounded-md border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200"
                         min="1"
@@ -250,7 +315,8 @@ export default function UploadPage() {
                         placeholder="0"
                         value={destructType === "hours" ? destructValue : ""}
                         onChange={(e) => {
-                          if (destructType === "hours") setDestructValue(e.target.value)
+                          if (destructType === "hours")
+                            setDestructValue(e.target.value);
                         }}
                         className="w-20 h-8 text-sm rounded-md border-gray-300 focus:border-blue-500 focus:ring focus:ring-blue-200"
                         min="1"
@@ -269,20 +335,30 @@ export default function UploadPage() {
           <div className="pt-4">
             <Button
               size="lg"
-              disabled={!canGenerate}
+              disabled={!canGenerate || loading}
               onClick={handleGenerateAndContinue}
               className={cn(
-                "w-full rounded-lg text-white text-base font-medium transition-all",
-                canGenerate
+                "w-full rounded-lg text-base font-medium transition-all",
+                canGenerate && !loading
                   ? "bg-blue-600 hover:bg-blue-700 focus:ring focus:ring-blue-200"
-                  : "bg-gray-300 cursor-not-allowed"
+                  : "bg-gray-300 text-black cursor-not-allowed"
               )}
             >
-              Generate Link & Continue <span className="ml-2 transform rotate-0">➔</span>
+              {loading ? (
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="animate-spin" />
+                  Generating...
+                </div>
+              ) : (
+                <>
+                  Generate Link & Continue{" "}
+                  <span className="ml-2 transform rotate-0">➔</span>
+                </>
+              )}
             </Button>
           </div>
         </div>
       </main>
     </div>
-  )
+  );
 }
