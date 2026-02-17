@@ -2,7 +2,32 @@
 
 Thank you for your interest in contributing to **Zaplink** as part of the **GDG CHARUSAT Open Source Contri Sprintathon**! 🎉
 
-We welcome contributions from developers of all skill levels. This guide will help you get started with your first contribution.
+---
+
+## 🚨 Contribution Rules
+
+> **Read this section carefully before doing anything. Violations will result in your PR being closed without review.**
+
+- ❌ **Do NOT open PRs for issues unless you are officially assigned**
+- ❌ **Do NOT create new issues** — issues are created and managed only by organizers
+- ❌ **PRs without a linked issue (or team number) will be closed immediately**
+- ❌ **PRs for unassigned issues will be closed without merging**
+- ✅ **One issue per contributor at a time** — finish and submit before picking another
+- ✅ **Only maintainers can merge PRs** — do not ask others to merge your PR
+- ✅ **Every PR must include your Team Number** in the description
+- ✅ **General improvement PRs** (bug fixes or enhancements outside existing issues) are allowed but reviewed strictly — you must still include your team number and clearly explain the change
+
+---
+
+## 📌 Issue Policy
+
+- Issues are **created and managed only by organizers** — do not open your own issues
+- To work on an issue, **comment on it requesting assignment** (e.g., *"I'd like to work on this, Team 07"*)
+- **Wait for a maintainer to officially assign you** before writing any code
+- Once assigned, you must submit your PR within **3–5 days** or the issue will be reassigned
+- If you're stuck or unavailable, **comment on the issue** so maintainers can help or reassign
+
+---
 
 ## 📋 Table of Contents
 
@@ -113,10 +138,12 @@ git checkout -b feature/your-feature-name
 
 - Browse the [Issues](https://github.com/gdg-charusat/Zaplink_frontend/issues) page
 - Look for issues labeled:
-  - `good-first-issue` or `beginner` - for beginners (Level 1)
-  - `intermediate` - for intermediate level (Level 2)
-- **Comment on the issue** to let maintainers know you're interested
-- **Wait for assignment** before starting work to avoid duplicate efforts
+  - `good-first-issue` or `beginner` — for beginners (Level 1)
+  - `intermediate` — for intermediate level (Level 2)
+- **Comment on the issue** with your request and team number, e.g.:
+  > *"Hi, I'd like to work on this issue. — Team 07"*
+- **Wait to be officially assigned** — do not start writing any code until a maintainer assigns you
+- **Do not work on an issue already assigned to someone else**
 
 ### 2. Make Your Changes
 
@@ -175,18 +202,21 @@ git push origin feature/your-feature-name
 
 1. Go to your fork on GitHub: `https://github.com/YOUR-USERNAME/Zaplink_frontend`
 2. Click **"Compare & pull request"** button
-3. Fill out the PR template:
-   - **Title**: Clear, descriptive title (e.g., "Add user authentication modal")
+3. Fill out the PR template completely:
+   - **Title**: Clear, descriptive title (e.g., "Add loading spinner component")
+   - **Team Number**: You **must** state your team number (e.g., `Team 07`) — PRs without this will be closed
+   - **Issue Reference**: Link the assigned issue (e.g., `Closes #42`) — PRs without a linked issue will be closed unless it's a general improvement PR
    - **Description**: Explain what changes you made and why
-   - **Issue Reference**: Link the issue you're closing (e.g., "Closes #123")
    - **Screenshots**: Add before/after screenshots if UI changes are involved
 4. Click **"Create pull request"**
+
+> 💡 **For General Improvement PRs** (bugs or enhancements not linked to any issue): You must still include your **Team Number** and a clear explanation of what you changed and why. These PRs are reviewed strictly.
 
 ## 📝 Issue Guidelines
 
 ### Finding Issues
 
-Issues are categorized by difficulty level:
+Issues are categorized by difficulty level and **created exclusively by organizers**:
 
 **Beginner Level (Good First Issues)**
 - Simple UI fixes
@@ -202,43 +232,61 @@ Issues are categorized by difficulty level:
 - Responsive design challenges
 - Labels: `intermediate`, `level-2`
 
-### Working on Issues
+### How to Request an Issue
 
-1. **Before starting**: Comment on the issue expressing your interest
-2. **Get assigned**: Wait for a maintainer to assign you
-3. **Ask questions**: If anything is unclear, ask in the issue comments
-4. **Time commitment**: Try to complete within 3-5 days or update the maintainers
-5. **Stuck?**: Ask for help in the issue or on the event Discord/WhatsApp
+1. Find an unassigned issue you want to work on
+2. **Comment on the issue** with this format:
+   > *"I'd like to work on this. — Team [your team number]"*
+3. **Wait for a maintainer to assign it to you** — this is mandatory
+4. Once assigned, start working and submit your PR within **3–5 days**
+5. If you can't complete it in time, comment to let maintainers know
+
+> ⚠️ **Do NOT open new issues.** If you spot a bug or have a feature idea, raise it with a maintainer directly in the event channel.
 
 ## 🔄 Pull Request Process
 
+### PR Requirements — Non-Negotiable
+
+> PRs that don't meet ALL of the following will be **closed without review**:
+
+- [ ] **Team number stated** in the PR description (e.g., `Team 07`)
+- [ ] **Linked to your assigned issue** via `Closes #issue-number` (unless it's a general improvement PR)
+- [ ] **You are the assigned contributor** for that issue
+- [ ] PR is raised **after** assignment, not before
+
 ### Before Submitting
 
-- [ ] Code runs without errors
+- [ ] Code runs without errors (`npm run dev` works)
+- [ ] Project builds successfully (`npm run build`)
 - [ ] All new components are properly typed (TypeScript)
-- [ ] Tailwind CSS classes are used consistently
-- [ ] Code follows the project's style guidelines
-- [ ] Tested on different screen sizes (responsive design)
+- [ ] Tailwind CSS classes used — no inline styles
+- [ ] Tested on different screen sizes
 - [ ] No console errors or warnings
 - [ ] Commit messages follow the conventional format
 
 ### PR Review Process
 
-1. A maintainer will review your PR within 24-48 hours
-2. You may be asked to make changes
-3. Make the requested changes and push to the same branch
-4. Once approved, your PR will be merged!
+1. A maintainer will review your PR within 24–48 hours
+2. You may be asked to make changes — respond promptly
+3. Make requested changes and push to the same branch (PR auto-updates)
+4. **Only maintainers can approve and merge** — do not request peers to merge
 
 ### Addressing Review Comments
 
 ```bash
-# Make the requested changes
+# Make the requested changes, then:
 git add .
 git commit -m "fix: address review comments"
 git push origin feature/your-feature-name
 ```
 
-The PR will automatically update with your new commits.
+### General Improvement PRs (No Issue Linked)
+
+If you want to fix a bug or add a small improvement that isn't part of an existing issue, you may raise a PR directly **only if**:
+- It is a genuine improvement (not a trivial change)
+- Your **Team Number** is clearly stated in the PR description
+- You provide a clear explanation of what you changed and why
+- You understand it will be **reviewed strictly** and may be closed if not up to standard
 
 ## 🎨 Code Style Guidelines
 
