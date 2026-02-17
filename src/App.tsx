@@ -8,6 +8,7 @@ import ViewZap from "./components/ViewZap";
 // import UrlShortenerPage from "./components/UrlShortenerPage";
 import { Analytics } from "@vercel/analytics/react";
 import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
 
 // Wrapper for ViewZap to show logo-only navbar if password is required
 function ViewZapWrapper() {
@@ -17,6 +18,7 @@ function ViewZapWrapper() {
     <>
       <Navbar hideNavOptions={!!passwordRequired} />
       <ViewZap />
+      <Footer />
     </>
   );
 }
@@ -73,6 +75,7 @@ export default function App() {
         <Route path="/zaps/:shortId" element={<ViewZapWrapper />} />
         {/* // <Route path="/url-shortener" element={<UrlShortenerPage />} /> */}
       </Routes>
+      <Footer />
       <Analytics />
     </>
   );
