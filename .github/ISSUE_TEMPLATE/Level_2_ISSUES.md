@@ -1,3 +1,11 @@
+---
+name: "🟡 Level 2 - Intermediate Issue"
+about: Intermediate-level contribution task for the sprintathon
+title: "[INTERMEDIATE] "
+labels: ["intermediate", "level_2"]
+assignees: ""
+---
+```
 # Sample Intermediate Issues for Zaplink Frontend
 
 These are example issues suitable for intermediate-level contributors participating in the GDG CHARUSAT Open Source Contri Sprintathon. Copy and paste these into GitHub Issues with appropriate labels (`intermediate`, `level-2`).
