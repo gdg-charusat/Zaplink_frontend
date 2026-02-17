@@ -23,24 +23,24 @@ jobs:
             const prNumber = pr.number;
             const author = pr.user.login;
 
-            // ── Ensure all required labels exist ──────────────────────────
             const ensureLabel = async (name, color, description) => {
               try {
                 await github.rest.issues.createLabel({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
-                  name, color, description
+                  name: name,
+                  color: color,
+                  description: description
                 });
-              } catch (e) { /* already exists — ignore */ }
+              } catch (e) {}
             };
 
-            await ensureLabel('invalid-pr',          'e11d48', 'PR is missing required information');
-            await ensureLabel('needs-review',         '7c3aed', 'Valid issue-linked PR awaiting maintainer review');
-            await ensureLabel('needs-admin-review',   'f59e0b', 'General improvement PR — admin must assign level before merging');
-            await ensureLabel('level-1',              '22c55e', 'Beginner contribution (5 pts)');
-            await ensureLabel('level-2',              'f97316', 'Intermediate contribution (20 pts)');
+            await ensureLabel('invalid-pr',        'e11d48', 'PR is missing required information');
+            await ensureLabel('needs-review',       '7c3aed', 'Valid issue-linked PR awaiting review');
+            await ensureLabel('needs-admin-review', 'f59e0b', 'General improvement PR - admin must assign level');
+            await ensureLabel('level-1',            '22c55e', 'Beginner contribution (5 pts)');
+            await ensureLabel('level-2',            'f97316', 'Intermediate contribution (20 pts)');
 
-            // ── Remove stale validation labels ────────────────────────────
             const removeLabel = async (label) => {
               try {
                 await github.rest.issues.removeLabel({
@@ -49,25 +49,20 @@ jobs:
                   issue_number: prNumber,
                   name: label
                 });
-              } catch (e) { /* wasn't applied — ignore */ }
+              } catch (e) {}
             };
 
             await removeLabel('invalid-pr');
             await removeLabel('needs-review');
             await removeLabel('needs-admin-review');
 
-            // ── Check for team number  e.g. "Team 07", "team 3" ──────────
             const teamMatch = body.match(/team\s*\d+/i);
             const hasTeamNumber = Boolean(teamMatch);
-            const teamLabel = teamMatch
-              ? teamMatch[0].replace(/\s+/g, ' ').trim()
-              : null;
+            const teamLabel = hasTeamNumber ? teamMatch[0].replace(/\s+/g, ' ').trim() : null;
 
-            // ── Check for linked issue  e.g. "Closes #42" ─────────────────
             const issueMatch = body.match(/(close[sd]?|fix(e[sd])?|resolve[sd]?)\s*#\d+/i);
             const hasLinkedIssue = Boolean(issueMatch);
 
-            // ── CASE 1: Missing team number — always invalid ───────────────
             if (!hasTeamNumber) {
               await github.rest.issues.addLabels({
                 owner: context.repo.owner,
@@ -76,33 +71,29 @@ jobs:
                 labels: ['invalid-pr']
               });
 
+              const lines1 = [];
+              lines1.push('## Warning: PR Validation Failed');
+              lines1.push('');
+              lines1.push('Hey @' + author + '! Your PR is missing a required field:');
+              lines1.push('');
+              lines1.push('**Team Number missing** - Add your team number in the PR description. Example: `Team 07`');
+              lines1.push('');
+              lines1.push('**How to fix:**');
+              lines1.push('1. Click the pencil icon on your PR description');
+              lines1.push('2. Add your team number anywhere in the description');
+              lines1.push('3. Save - this check will run again automatically');
+              lines1.push('');
+              lines1.push('> GDG CHARUSAT Open Source Contri Sprintathon');
+
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: prNumber,
-                body: `## ⚠️ PR Validation Failed
-
-Hey @${author}! Your PR is missing a required field:
-
-❌ **Team Number missing** — Add your team number in the PR description.
-
-**Example:**
-\`\`\`
-Team 07
-\`\`\`
-
-### How to fix:
-1. Click the **pencil icon ✏️** on your PR description
-2. Add your team number anywhere in the description
-3. Save — this check will run again automatically
-
-> 📖 See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md) for full guidelines.
-> 🚀 **GDG CHARUSAT Open Source Contri Sprintathon**`
+                body: lines1.join('\n')
               });
               return;
             }
 
-            // ── CASE 2: Has team number + linked issue → standard PR ───────
             if (hasTeamNumber && hasLinkedIssue) {
               await github.rest.issues.addLabels({
                 owner: context.repo.owner,
@@ -111,27 +102,29 @@ Team 07
                 labels: ['needs-review']
               });
 
+              const lines2 = [];
+              lines2.push('## PR Validation Passed');
+              lines2.push('');
+              lines2.push('Hey @' + author + '! Your PR looks good. Here is what we found:');
+              lines2.push('');
+              lines2.push('| | |');
+              lines2.push('|---|---|');
+              lines2.push('| **Team Number** | ' + teamLabel + ' |');
+              lines2.push('| **Linked Issue** | ' + issueMatch[0] + ' |');
+              lines2.push('');
+              lines2.push('A maintainer will review your PR within 24-48 hours. Stay responsive to feedback!');
+              lines2.push('');
+              lines2.push('> GDG CHARUSAT Open Source Contri Sprintathon');
+
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: prNumber,
-                body: `## ✅ PR Validation Passed
-
-Hey @${author}! Your PR looks good. Here's what we found:
-
-| | |
-|---|---|
-| 👥 **Team Number** | \`${teamLabel}\` |
-| 🔗 **Linked Issue** | \`${issueMatch[0]}\` |
-
-A maintainer will review your PR within **24–48 hours**. Stay responsive to feedback!
-
-> 🚀 **GDG CHARUSAT Open Source Contri Sprintathon**`
+                body: lines2.join('\n')
               });
               return;
             }
 
-            // ── CASE 3: Has team number but NO linked issue → general improvement PR ──
             if (hasTeamNumber && !hasLinkedIssue) {
               await github.rest.issues.addLabels({
                 owner: context.repo.owner,
@@ -140,27 +133,29 @@ A maintainer will review your PR within **24–48 hours**. Stay responsive to fe
                 labels: ['needs-admin-review']
               });
 
+              const lines3 = [];
+              lines3.push('## General Improvement PR - Pending Admin Review');
+              lines3.push('');
+              lines3.push('Hey @' + author + '! Your PR has been received as a General Improvement PR (no linked issue).');
+              lines3.push('');
+              lines3.push('| | |');
+              lines3.push('|---|---|');
+              lines3.push('| **Team Number** | ' + teamLabel + ' |');
+              lines3.push('| **Linked Issue** | None |');
+              lines3.push('');
+              lines3.push('**What happens next:**');
+              lines3.push('1. An admin will review your changes');
+              lines3.push('2. If approved, admin will assign a level label (level-1 or level-2) based on complexity');
+              lines3.push('3. Points will be calculated automatically when the PR is merged');
+              lines3.push('');
+              lines3.push('> Please be patient - admin review may take longer than standard PRs.');
+              lines3.push('> PRs that are trivial or low quality may be closed without merging.');
+              lines3.push('> GDG CHARUSAT Open Source Contri Sprintathon');
+
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
                 issue_number: prNumber,
-                body: `## 🔍 General Improvement PR — Pending Admin Review
-
-Hey @${author}! Your PR has been received as a **General Improvement PR** (no linked issue).
-
-| | |
-|---|---|
-| 👥 **Team Number** | \`${teamLabel}\` |
-| 🔗 **Linked Issue** | None |
-
-**What happens next:**
-1. 🔎 An admin will review your changes
-2. 🏷️ If approved, the admin will assign a level label (\`level-1\` or \`level-2]\`) based on the complexity of your contribution
-3. ⭐ Points will be calculated automatically when the PR is merged
-
-> ⏳ Please be patient — admin review may take longer than standard PRs.
-> ⚠️ PRs that are trivial or low quality may be closed without merging.
-> 📖 See [CONTRIBUTING.md](../blob/main/CONTRIBUTING.md) for guidelines.
-> 🚀 **GDG CHARUSAT Open Source Contri Sprintathon**`
+                body: lines3.join('\n')
               });
             }
