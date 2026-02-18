@@ -141,7 +141,7 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) to understand the expected
 
 Thanks to all our amazing contributors!
 
-<!-- Add contributor badges or list here -->
+<!-- Add contributor badges or list here -->-
 
 ---
 
