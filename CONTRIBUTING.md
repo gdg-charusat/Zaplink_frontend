@@ -9,10 +9,10 @@ Thank you for your interest in contributing to **Zaplink** as part of the **GDG 
 > **Read this section carefully before doing anything. Violations will result in your PR being closed without review.**
 
 - ❌ **Do NOT open PRs for issues unless you are officially assigned**
-- ❌ **Do NOT create new issues** - issues are created and managed only by organizers
 - ❌ **PRs without a linked issue (or team number) will be closed immediately**
 - ❌ **PRs for unassigned issues will be closed without merging**
 - ❌ **Do NOT self-assign issues**
+- ✅ **Contributors may create new issues for bugs, enhancements, or documentation improvements**, following the Issue Guidelines below
 - ✅ **One issue per contributor at a time** - finish and submit before picking another
 - ✅ **Only maintainers can assign, review, and merge PRs** - do not ask others to merge your PR
 - ✅ **Every PR must include your Team Number** in the description
@@ -22,7 +22,13 @@ Thank you for your interest in contributing to **Zaplink** as part of the **GDG 
 
 ## 📌 Issue Policy
 
-- Issues are **created and managed only by organizers** - do not open your own issues
+- Contributors may create new issues for:
+  - Bugs
+  - UI/UX inconsistencies
+  - Documentation improvements
+  - Feature suggestions
+- Before creating a new issue, check that a similar issue does not already exist
+- Use clear, descriptive titles and provide proper details
 - To work on an issue, **comment on it requesting assignment** (e.g., *"I'd like to work on this, Team XX"*)
 - **Wait for a maintainer to officially assign you** before writing any code
 - Once assigned, you must submit your PR within **3-5 days** or the issue will be reassigned
@@ -32,7 +38,7 @@ Thank you for your interest in contributing to **Zaplink** as part of the **GDG 
 
 ## 🚀 Reporting Bugs or Proposing Improvements
 
-As part of this competition, **participants are not permitted to create new issues** in the repository.
+Participants are allowed to create new issues for bugs, enhancements, or improvements, provided they follow proper documentation standards.
 
 If you identify:
 
@@ -42,13 +48,13 @@ If you identify:
 - A minor or major enhancement  
 - A refactor that improves code quality or maintainability  
 
-You must **submit a Pull Request directly**.
+You must **create a new issue and wait for it to be approved**.
 
 ---
 
 ### 📌 Important Guidelines
 
-- ❌ Do **not** open a new issue for such findings.  
+- ✅ Open a new issue describing the problem clearly, and approve it before submitting a Pull Request.
 - ✅ Submit a Pull Request with a clear and structured description.  
 - ✅ Include your **Team Number** in the PR description.  
 - ✅ Clearly explain the problem and the rationale behind your proposed change.  
@@ -85,18 +91,6 @@ If you need environment variables to work on an assigned issue, please contact t
 - 📧 **Email:** jadejakrishnapal04@gmail.com
 
 Environment details will be shared **only after the issue is officially assigned to you**.
-
-
-## 📋 Table of Contents
-
-- [Tech Stack](#tech-stack)
-- [Prerequisites](#prerequisites)
-- [Getting Started](#getting-started)
-- [Development Workflow](#development-workflow)
-- [Issue Guidelines](#issue-guidelines)
-- [Pull Request Process](#pull-request-process)
-- [Code Style Guidelines](#code-style-guidelines)
-- [Need Help?](#need-help)
 
 ## 🛠 Tech Stack
 
@@ -196,11 +190,11 @@ git checkout -b feature/your-feature-name
 
 - Browse the [Issues](https://github.com/gdg-charusat/Zaplink_frontend/issues) page
 - Look for issues labeled:
-  - `good-first-issue` or `beginner` — for beginners (Level 1)
-  - `intermediate` — for intermediate level (Level 2)
+  - `good-first-issue` or `beginner` - for beginners (Level 1)
+  - `intermediate` - for intermediate level (Level 2)
 - **Comment on the issue** with your request and team number, e.g.:
-  > *"Hi, I'd like to work on this issue. — Team 07"*
-- **Wait to be officially assigned** — do not start writing any code until a maintainer assigns you
+  > *"Hi, I'd like to work on this issue. - Team 07"*
+- **Wait to be officially assigned** - do not start writing any code until a maintainer assigns you
 - **Do not work on an issue already assigned to someone else**
 
 ### 2. Make Your Changes
@@ -274,7 +268,7 @@ git push origin feature/your-feature-name
 
 ### Finding Issues
 
-Issues are categorized by difficulty level and **created exclusively by organizers**:
+Issues are categorized by difficulty level. Contributors may also create well-documented issues for valid improvements.
 
 **Beginner Level (Good First Issues)**
 - Simple UI fixes
@@ -294,12 +288,29 @@ Issues are categorized by difficulty level and **created exclusively by organize
 
 1. Find an unassigned issue you want to work on
 2. **Comment on the issue** with this format:
-   > *"I'd like to work on this. — Team [your team number]"*
+   > *"I'd like to work on this. - Team [your team number]"*
 3. **Wait for a maintainer to assign it to you** — this is mandatory
 4. Once assigned, start working and submit your PR within **3–5 days**
 5. If you can't complete it in time, comment to let maintainers know
 
-> ⚠️ **Do NOT open new issues.** If you spot a bug or have a feature idea, raise it with a maintainer directly in the event channel.
+> ⚠️ Before opening a new issue, ensure:
+> - The issue does not already exist
+> - It is clearly documented
+> - It aligns with the project scope
+
+### Creating a New Issue
+
+When creating a new issue:
+
+1. Use a clear and descriptive title
+2. Add a detailed description:
+   - What is the problem?
+   - Steps to reproduce (if bug)
+   - Expected behavior
+   - Screenshots (if UI-related)
+3. Wait for maintainer review before starting work
+
+⚠️ Do not start working on a self-created issue unless it is assigned to you.
 
 ## 🔄 Pull Request Process
 
@@ -307,7 +318,7 @@ Issues are categorized by difficulty level and **created exclusively by organize
 
 > PRs that don't meet ALL of the following will be **closed without review**:
 
-- [ ] **Team number stated** in the PR description (e.g., `Team 07`)
+- [ ] **Team number stated** in the PR description (e.g., `Team XX`)
 - [ ] **Linked to your assigned issue** via `Closes #issue-number` (unless it's a general improvement PR)
 - [ ] **You are the assigned contributor** for that issue
 - [ ] PR is raised **after** assignment, not before
