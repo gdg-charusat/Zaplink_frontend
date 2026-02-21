@@ -6,6 +6,7 @@ import HowItWorks from "./components/HowItWorks";
 import AboutUs from "./components/AboutUs";
 import ViewZap from "./components/ViewZap";
 // import UrlShortenerPage from "./components/UrlShortenerPage";
+import UrlShortenerPage from "./components/UrlShortenerPage";
 import { Analytics } from "@vercel/analytics/react";
 import Navbar from "./components/Navbar";
 
