@@ -1,10 +1,32 @@
-# Zaplink Frontend - GDG CHARUSAT Open Source Contri Sprintathon 
+# Zaplink — Secure QR Code & File Sharing Platform
 
-## 🎯 About This Project
+## 🔗 About Zaplink
 
-Zaplink is an open-source project maintained by GDG CHARUSAT. This frontend is built with **React**, **TypeScript**, **Vite**, and **Tailwind CSS**, providing a modern and responsive user experience.
+Zaplink is an open-source platform that lets you transform any file, link, or text into a **secure, shareable QR code** — instantly. Whether it's a PDF report, a video, an image, or a URL, Zaplink wraps it in a unique short link and QR code that you can share anywhere.
 
-This repository is part of the **GDG CHARUSAT Open Source Contri Sprintathon** - a hands-on event designed to help students learn about open source contribution!
+Every "Zap" (your uploaded content) can be locked with a **password** and configured to **self-destruct** after a set number of views or a time limit — making it ideal for sensitive, time-critical content sharing.
+
+Zaplink also lets you **customize your QR code** with frames, logos, and styles before downloading or sharing it. It's built with React, TypeScript, Vite, and Tailwind CSS, and is maintained by **GDG CHARUSAT** as part of their open-source learning initiative.
+## ✨ Features
+
+- 📁 **Multi-format Support** — Upload PDFs, images, videos, audio, documents, presentations, ZIP archives, URLs, and plain text
+- 🔐 **Password Protection** — Lock any Zap with a password so only authorized people can access it
+- 💣 **Self-Destruct** — Set a view-count limit or an expiry time after which the link stops working automatically
+- 🎨 **QR Code Customization** — Choose from frame styles (rounded, circle, shadow, gradient, border) and embed your own logo
+- ⚡ **Instant QR Generation** — Get a QR code and short link in seconds, no registration required
+- 🌗 **Dark/Light Mode** — Full theme toggle support for a comfortable experience
+- 📱 **Fully Responsive** — Works seamlessly on mobile, tablet, and desktop
+
+## 📸 Screenshots
+
+### Home — Choose What to Share
+![Home Page](public/screenshots/home.png)
+
+### Step-by-Step Upload Flow
+![Steps to Generate](public/screenshots/steps-to-generate.png)
+
+### Things You Can Share
+![Things to Share](public/screenshots/things-to-share.png)
 
 ---
 
