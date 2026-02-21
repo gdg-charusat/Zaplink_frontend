@@ -104,12 +104,22 @@ export default function UploadPage() {
   const [passwordProtect, setPasswordProtect] = useState(false);
   const [password, setPassword] = useState("");
   const [selfDestruct, setSelfDestruct] = useState(false);
-  const [destructViews, setDestructViews] = useState(() =>
-    JSON.parse(sessionStorage.getItem("destructViews") || "false")
-  );
-  const [destructTime, setDestructTime] = useState(() =>
-    JSON.parse(sessionStorage.getItem("destructTime") || "false")
-  );
+  const [destructViews, setDestructViews] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("destructViews") || "false");
+    } catch (error) {
+      console.warn("Failed to parse destructViews from sessionStorage:", error);
+      return false;
+    }
+  });
+  const [destructTime, setDestructTime] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("destructTime") || "false");
+    } catch (error) {
+      console.warn("Failed to parse destructTime from sessionStorage:", error);
+      return false;
+    }
+  });
   const [viewsValue, setViewsValue] = useState(
     () => sessionStorage.getItem("viewsValue") || ""
   );
@@ -122,8 +132,14 @@ export default function UploadPage() {
   const [textValue, setTextValue] = useState("");
   const [compressPdf, setCompressPdf] = useState(false);
   const [lastQR, setLastQR] = useState(() => {
-    const data = sessionStorage.getItem("lastQR");
-    return data ? JSON.parse(data) : null;
+    try {
+      const data = sessionStorage.getItem("lastQR");
+      return data ? JSON.parse(data) : null;
+    } catch (error) {
+      console.warn("Failed to parse lastQR from sessionStorage:", error);
+      sessionStorage.removeItem("lastQR");
+      return null;
+    }
   });
   const [lastQRFormHash, setLastQRFormHash] = useState(() => {
     const data = sessionStorage.getItem("lastQRFormHash");
