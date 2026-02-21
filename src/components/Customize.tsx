@@ -143,7 +143,7 @@ export default function CustomizePage() {
       setCopied(true);
       toast.success("Short link has been copied to clipboard.");
       setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
+    } catch {
       toast.error("Failed to copy link. Please try again.");
     }
   };

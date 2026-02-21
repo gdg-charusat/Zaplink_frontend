@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -78,11 +78,12 @@ export default function ViewZap() {
         if (response.data) {
           window.location.href = response.data.url;
         }
-      } catch (err: any) {
-        if (err.response?.status === 401) {
+      } catch (err) {
+        const error = err as AxiosError<{ message: string }>;
+        if (error.response?.status === 401) {
           // Check if it's a password required error
           if (
-            err.response.data?.message
+            error.response.data?.message
               ?.toLowerCase()
               .includes("password required")
           ) {
@@ -90,7 +91,7 @@ export default function ViewZap() {
             setLoading(false);
             return;
           } else if (
-            err.response.data?.message
+            error.response.data?.message
               ?.toLowerCase()
               .includes("incorrect password")
           ) {
@@ -99,13 +100,13 @@ export default function ViewZap() {
             setLoading(false);
             return;
           }
-        } else if (err.response?.status === 410) {
+        } else if (error.response?.status === 410) {
           setError("This link has expired. The file is no longer available.");
           setErrorType("expired");
           toast.error(
             "This link has expired. The file is no longer available."
           );
-        } else if (err.response?.status === 404) {
+        } else if (error.response?.status === 404) {
           setError("This link does not exist or has expired.");
           setErrorType("notfound");
           toast.error("This link does not exist or has expired.");
@@ -150,7 +151,13 @@ export default function ViewZap() {
       if (response.data) {
         const { type, url, content, data, name } = response.data;
 
-        if (type === "redirect" || type === "file") {
+        if (
+          type === "redirect" ||
+          type === "file" ||
+          type === "pdf" ||
+          type === "video" ||
+          type === "audio"
+        ) {
           // Redirect to the URL
           window.location.href = url;
         } else if (type === "text" || type === "document") {
@@ -261,27 +268,28 @@ export default function ViewZap() {
           }
         }
       }
-    } catch (err: any) {
+    } catch (err) {
+      const error = err as AxiosError<{ message: string }>;
       if (
-        err.response &&
-        err.response.status === 401 &&
-        err.response.data?.message?.toLowerCase().includes("incorrect password")
+        error.response &&
+        error.response.status === 401 &&
+        error.response.data?.message?.toLowerCase().includes("incorrect password")
       ) {
         setPasswordError("Incorrect password. Please try again.");
       } else if (
-        err.response &&
-        err.response.status === 401 &&
-        err.response.data?.message?.toLowerCase().includes("password required")
+        error.response &&
+        error.response.status === 401 &&
+        error.response.data?.message?.toLowerCase().includes("password required")
       ) {
         setPasswordError("Password required.");
       } else if (
-        err.response &&
-        (err.response.status === 410 || err.response.status === 403)
+        error.response &&
+        (error.response.status === 410 || error.response.status === 403)
       ) {
         setError("View limit exceeded. This file is no longer accessible.");
         setErrorType("viewlimit");
         toast.error("View limit exceeded. This file is no longer accessible.");
-      } else if (err.response && err.response.status === 404) {
+      } else if (error.response && error.response.status === 404) {
         setError("This link does not exist or has expired.");
         setErrorType("notfound");
         toast.error("This link does not exist or has expired.");

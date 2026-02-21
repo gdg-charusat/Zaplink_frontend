@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Upload, Loader2, X, Shield, Clock, Eye, Zap, FileText, Link, Type as TypeIcon } from "lucide-react";
+import { Loader2, Shield, Clock, Eye, Zap, FileText, Link, Type as TypeIcon } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
@@ -8,6 +8,7 @@ import { Button } from "./ui/button";
 import { toast } from "sonner";
 import axios, { AxiosError } from "axios";
 import { Switch } from "./ui/switch";
+import FileUpload from "./FileUpload";
 
 type FileType =
   | "image"
@@ -450,6 +451,7 @@ export default function UploadPage() {
     urlValue,
     textValue,
     type,
+    lastQRFormHash,
   ]);
 
   const handlePasswordProtectChange = (checked: boolean | "indeterminate") => {
@@ -476,69 +478,22 @@ export default function UploadPage() {
 
   // Add file size constraints
   const MAX_SIZE_MB = type === "video" ? 100 : 10;
-  const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
-  const validateFileType = (file: File) => {
-    if (
-      type === "url" ||
-      type === "text" ||
-      type === "document" ||
-      type === "presentation"
-    )
-      return true;
-    const ext = file.name.toLowerCase().slice(file.name.lastIndexOf("."));
-    const allowed = TYPE_EXTENSIONS[type] || [];
-    return allowed.length === 0 || allowed.includes(ext);
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > MAX_SIZE_BYTES) {
-      toast.error(
-        `${
-          type.charAt(0).toUpperCase() + type.slice(1)
-        } files must be ≤${MAX_SIZE_MB}MB.`
-      );
-      e.target.value = "";
-      return;
-    }
-    if (type === "pdf" && compressPdf) {
-      // Placeholder: compress PDF client-side
-      // const compressed = await compressPDF(file, 10 * 1024 * 1024);
-      // setUploadedFile(compressed);
-      toast.info(
-        "PDF compression is not yet implemented. Uploading original file."
-      );
+  // Handle files from the FileUpload component
+  const handleFilesFromUploader = (files: File[]) => {
+    if (files.length > 0) {
+      const file = files[0]; // Use first file for backward compat
       setUploadedFile(file);
-      return;
+      if (!qrName) {
+        setQrName(file.name);
+      }
+    } else {
+      setUploadedFile(null);
     }
-    if (type === "text") {
-      toast.error(
-        "Text type does not require file upload. Please use the text input below."
-      );
-      e.target.value = "";
-      return;
-    }
-    if (type === "document" || type === "presentation") {
-      // Allow these types to proceed with file upload
-    } else if (!validateFileType(file)) {
-      toast.error(TYPE_MESSAGES[type] || "Invalid file type.");
-      e.target.value = "";
-      return;
-    }
-    setUploadedFile(file);
-    setQrName(qrName ? qrName : file.name);
-    toast.success(`File "${file.name}" selected successfully!`);
   };
 
-  const handleRemoveFile = () => {
-    setUploadedFile(null);
-    const fileInput = document.getElementById("file") as HTMLInputElement;
-    if (fileInput) {
-      fileInput.value = "";
-    }
-    toast.info("File removed");
+  const handleUploadError = (error: string) => {
+    toast.error(error);
   };
 
   const handleQrNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -551,8 +506,8 @@ export default function UploadPage() {
     (type === "url"
       ? urlValue.trim()
       : type === "text"
-      ? textValue.trim()
-      : uploadedFile) &&
+        ? textValue.trim()
+        : uploadedFile) &&
     (!passwordProtect || password.trim()) &&
     (!selfDestruct ||
       (destructViews && viewsValue.trim()) ||
@@ -560,36 +515,26 @@ export default function UploadPage() {
 
   // Add this useEffect after state declarations
   useEffect(() => {
-    if (lastQR && lastQRFormHash) {
-      // Only prefill if form is at initial state (e.g., no file, no name, etc)
-      const isInitial =
-        !qrName &&
-        !uploadedFile &&
-        !passwordProtect &&
-        !password &&
-        !selfDestruct &&
-        !destructViews &&
-        !destructTime &&
-        !viewsValue &&
-        !timeValue &&
-        !urlValue &&
-        !textValue;
-      if (isInitial) {
-        setQrName(lastQR.name || "");
-        setPasswordProtect(!!lastQR.password);
-        setPassword(lastQR.password || "");
-        setSelfDestruct(!!lastQR.selfDestruct);
-        setDestructViews(!!lastQR.viewLimit);
-        setDestructTime(!!lastQR.expiresAt);
-        setViewsValue(lastQR.viewLimit ? String(lastQR.viewLimit) : "");
-        setTimeValue(lastQR.expiresAt ? String(lastQR.expiresAt) : "");
-        setUrlValue(lastQR.originalUrl || "");
-        setTextValue(lastQR.textContent || "");
-        setType(lastQR.type ? lastQR.type.toLowerCase() : type);
-        // Note: File cannot be restored for security reasons, user must reselect if needed
-      }
+    // check for last zap in local storage
+    const lastZapStr = localStorage.getItem("lastZap");
+    if (lastZapStr) {
+      const lastQR = JSON.parse(lastZapStr);
+      // Only restore if current state is empty
+      // We check the refs or assume it's mount time
+      setQrName(lastQR.name || "");
+      setPasswordProtect(!!lastQR.password);
+      setPassword(lastQR.password || "");
+      setSelfDestruct(!!lastQR.selfDestruct);
+      setDestructViews(!!lastQR.viewLimit);
+      setDestructTime(!!lastQR.expiresAt);
+      setViewsValue(lastQR.viewLimit ? String(lastQR.viewLimit) : "");
+      setTimeValue(lastQR.expiresAt ? String(lastQR.expiresAt) : "");
+      setUrlValue(lastQR.originalUrl || "");
+      setTextValue(lastQR.textContent || "");
+      setType(lastQR.type ? lastQR.type.toLowerCase() : "file");
+      // Note: File cannot be restored for security reasons
     }
-  }, []);
+  }, []); // Run only once on mount to restore previous session state
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -679,30 +624,27 @@ export default function UploadPage() {
             <div className="space-y-6">
               <div className="space-y-4">
                 <Label
-                  htmlFor="file"
                   className="text-lg font-semibold text-foreground flex items-center gap-3"
                 >
                   <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
                   <FileText className="h-5 w-5 text-purple-500" />
                   Upload File
                 </Label>
-                <div className="relative">
-                  <Input
-                    id="file"
-                    type="file"
-                    onChange={handleFileChange}
-                    accept={TYPE_EXTENSIONS[type].join(",")}
-                    className="cursor-pointer h-14 rounded-xl border-border bg-background file:mr-4 file:py-3 file:px-6 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 transition-all duration-200 focus-ring"
-                  />
-                </div>
+
+                <FileUpload
+                  key={type}
+                  maxFiles={1}
+                  maxSizeInMB={MAX_SIZE_MB}
+                  acceptedFileTypes={TYPE_EXTENSIONS[type]}
+                  onUpload={handleFilesFromUploader}
+                  onError={handleUploadError}
+                  multiple={false}
+                />
               </div>
 
               <div className="space-y-2">
                 <p className="text-sm text-muted-foreground pl-6">
                   {TYPE_MESSAGES[type]}
-                </p>
-                <p className="text-xs text-muted-foreground pl-6">
-                  Max size: {type === "video" ? "100MB" : "10MB"}
                 </p>
               </div>
 
@@ -716,31 +658,6 @@ export default function UploadPage() {
                   <label htmlFor="compress-pdf" className="text-sm text-muted-foreground">
                     Compress PDF before upload
                   </label>
-                </div>
-              )}
-
-              {uploadedFile && (
-                <div className="p-6 border border-border rounded-xl bg-muted/30">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-primary/10 rounded-xl">
-                      <Upload className="h-6 w-6 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-semibold text-foreground text-lg">
-                        {uploadedFile.name}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {(uploadedFile.size / 1024).toFixed(2)} KB
-                      </p>
-                    </div>
-                    <button
-                      onClick={handleRemoveFile}
-                      className="p-3 hover:bg-destructive/10 rounded-xl transition-colors duration-200 group focus-ring"
-                      title="Remove file"
-                    >
-                      <X className="h-5 w-5 text-muted-foreground group-hover:text-destructive" />
-                    </button>
-                  </div>
                 </div>
               )}
             </div>
@@ -888,20 +805,20 @@ export default function UploadPage() {
           {/* Continue to QR Button */}
           {lastQR &&
             lastQRFormHash ===
-              getFormDataHash({
-                qrName,
-                uploadedFile,
-                passwordProtect,
-                password,
-                selfDestruct,
-                destructViews,
-                destructTime,
-                viewsValue,
-                timeValue,
-                urlValue,
-                textValue,
-                type,
-              }) && (
+            getFormDataHash({
+              qrName,
+              uploadedFile,
+              passwordProtect,
+              password,
+              selfDestruct,
+              destructViews,
+              destructTime,
+              viewsValue,
+              timeValue,
+              urlValue,
+              textValue,
+              type,
+            }) && (
               <div className="w-full flex justify-center">
                 <Button
                   className="w-full max-w-md h-14 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-xl font-semibold transition-all duration-300 hover:scale-[1.02] focus-ring"
