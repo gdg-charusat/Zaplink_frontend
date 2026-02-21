@@ -71,7 +71,7 @@ export default function App() {
           }
         />
         <Route path="/zaps/:shortId" element={<ViewZapWrapper />} />
-        {/* // <Route path="/url-shortener" element={<UrlShortenerPage />} /> */}
+   <Route path="/url-shortener" element={<UrlShortenerPage />} />
       </Routes>
       <Analytics />
     </>
