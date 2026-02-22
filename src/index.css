@@ -373,6 +373,28 @@ body {
   box-shadow: 0 0 40px hsl(var(--primary) / 0.4);
 }
 
+/* ─── Infinite scroll & virtual list ─── */
+
+/* Optimise scrolling perf */
+.will-change-scroll {
+  will-change: transform;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Pulse animation for skeletons (supplement Tailwind) */
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+/* Pull-to-refresh smooth spring */
+.ptr-spring {
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
 /* File upload card animation */
 .file-card-enter {
   animation: fileCardEnter 0.3s ease-out;
