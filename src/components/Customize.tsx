@@ -49,6 +49,10 @@ export default function CustomizePage() {
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  ;
+
+  const [fgColor, setFgColor] = useState("#000000"); // ADD THIS
+
   const qrValue = state?.shortUrl || "https://zaplink.example.com/demo123";
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -194,7 +198,7 @@ export default function CustomizePage() {
                     value={qrValue}
                     size={240}
                     bgColor="#fff"
-                    fgColor="#000"
+                    fgColor={fgColor}
                     level="H"
                     includeMargin
                     imageSettings={
@@ -263,6 +267,21 @@ export default function CustomizePage() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Foreground Color Picker */}
+              <div className="space-y-4">
+                <Label className="text-base font-semibold text-foreground flex items-center gap-2">
+                  <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                  QR Foreground Color
+                </Label>
+
+                <input
+                  type="color"
+                  value={fgColor}
+                  onChange={(e) => setFgColor(e.target.value)}
+                  className="w-20 h-12 cursor-pointer rounded-md border border-border bg-background"
+                />
               </div>
 
               {/* Logo Upload */}
