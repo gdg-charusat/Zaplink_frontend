@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import axios, { AxiosError } from "axios";
 import { Switch } from "./ui/switch";
 import FileUpload from "./FileUpload";
+import { safeParse } from "../lib/utils";
 
 type FileType =
   | "image"
@@ -106,10 +107,10 @@ export default function UploadPage() {
   const [password, setPassword] = useState("");
   const [selfDestruct, setSelfDestruct] = useState(false);
   const [destructViews, setDestructViews] = useState(() =>
-    JSON.parse(sessionStorage.getItem("destructViews") || "false")
+    safeParse(sessionStorage.getItem("destructViews"), false)
   );
   const [destructTime, setDestructTime] = useState(() =>
-    JSON.parse(sessionStorage.getItem("destructTime") || "false")
+    safeParse(sessionStorage.getItem("destructTime"), false)
   );
   const [viewsValue, setViewsValue] = useState(
     () => sessionStorage.getItem("viewsValue") || ""
@@ -123,8 +124,7 @@ export default function UploadPage() {
   const [textValue, setTextValue] = useState("");
   const [compressPdf, setCompressPdf] = useState(false);
   const [lastQR, setLastQR] = useState(() => {
-    const data = sessionStorage.getItem("lastQR");
-    return data ? JSON.parse(data) : null;
+    return safeParse(sessionStorage.getItem("lastQR"), null);
   });
   const [lastQRFormHash, setLastQRFormHash] = useState(() => {
     const data = sessionStorage.getItem("lastQRFormHash");
@@ -518,7 +518,7 @@ export default function UploadPage() {
     // check for last zap in local storage
     const lastZapStr = localStorage.getItem("lastZap");
     if (lastZapStr) {
-      const lastQR = JSON.parse(lastZapStr);
+      const lastQR = safeParse(lastZapStr, {});
       // Only restore if current state is empty
       // We check the refs or assume it's mount time
       setQrName(lastQR.name || "");
