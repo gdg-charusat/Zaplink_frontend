@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import CopyButton from "./CopyButton";
 import { Link, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
@@ -337,6 +338,15 @@ export default function CustomizePage() {
                     Actions
                   </h2>
                 </div>
+
+                {/* Inline Short URL display with Copy button */}
+                <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-muted/30">
+                  <span className="flex-1 truncate text-sm text-muted-foreground font-mono select-all" title={qrValue}>
+                    {qrValue}
+                  </span>
+                  <CopyButton text={qrValue} />
+                </div>
+
                 <div className="grid grid-cols-1 gap-4">
                   <Button
                     onClick={handleDownload}
