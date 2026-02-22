@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { Loader2, Shield, Clock, Eye, Zap, FileText, Link, Type as TypeIcon } from "lucide-react";
+import axios, { AxiosError } from "axios";
+import { Clock, Eye, FileText, Link, Loader2, Shield, Type as TypeIcon, Zap } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import FileUpload from "./FileUpload";
+import { Button } from "./ui/button";
+import { Checkbox } from "./ui/checkbox";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Checkbox } from "./ui/checkbox";
-import { Button } from "./ui/button";
-import { toast } from "sonner";
-import axios, { AxiosError } from "axios";
 import { Switch } from "./ui/switch";
-import FileUpload from "./FileUpload";
 
 type FileType =
   | "image"
@@ -105,12 +105,20 @@ export default function UploadPage() {
   const [passwordProtect, setPasswordProtect] = useState(false);
   const [password, setPassword] = useState("");
   const [selfDestruct, setSelfDestruct] = useState(false);
-  const [destructViews, setDestructViews] = useState(() =>
-    JSON.parse(sessionStorage.getItem("destructViews") || "false")
-  );
-  const [destructTime, setDestructTime] = useState(() =>
-    JSON.parse(sessionStorage.getItem("destructTime") || "false")
-  );
+  const [destructViews, setDestructViews] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("destructViews") || "false");
+    } catch {
+      return false;
+    }
+  });
+  const [destructTime, setDestructTime] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("destructTime") || "false");
+    } catch {
+      return false;
+    }
+  });
   const [viewsValue, setViewsValue] = useState(
     () => sessionStorage.getItem("viewsValue") || ""
   );
@@ -123,12 +131,22 @@ export default function UploadPage() {
   const [textValue, setTextValue] = useState("");
   const [compressPdf, setCompressPdf] = useState(false);
   const [lastQR, setLastQR] = useState(() => {
-    const data = sessionStorage.getItem("lastQR");
-    return data ? JSON.parse(data) : null;
+    try {
+      const data = sessionStorage.getItem("lastQR");
+      return data ? JSON.parse(data) : null;
+    } catch {
+      sessionStorage.removeItem("lastQR");
+      return null;
+    }
   });
   const [lastQRFormHash, setLastQRFormHash] = useState(() => {
-    const data = sessionStorage.getItem("lastQRFormHash");
-    return data || null;
+    try {
+      const data = sessionStorage.getItem("lastQRFormHash");
+      return data || null;
+    } catch {
+      sessionStorage.removeItem("lastQRFormHash");
+      return null;
+    }
   });
 
   // Persist state to sessionStorage
@@ -565,7 +583,7 @@ export default function UploadPage() {
               placeholder="Enter a memorable name..."
               value={qrName}
               onChange={handleQrNameChange}
-              className="input-focus text-base rounded-xl border-border bg-background h-14 px-6 font-medium text-lg focus-ring"
+              className="input-focus rounded-xl border-border bg-background h-14 px-6 font-medium text-lg focus-ring"
             />
           </div>
 
@@ -586,7 +604,7 @@ export default function UploadPage() {
                 value={urlValue}
                 onChange={(e) => setUrlValue(e.target.value)}
                 placeholder="https://example.com"
-                className="input-focus text-base rounded-xl border-border bg-background h-14 px-6 text-lg focus-ring"
+                className="input-focus rounded-xl border-border bg-background h-14 px-6 text-lg focus-ring"
               />
               <p className="text-sm text-muted-foreground pl-6">
                 {TYPE_MESSAGES[type]}
@@ -721,7 +739,7 @@ export default function UploadPage() {
                     <Checkbox
                       id="destruct-views"
                       checked={destructViews}
-                      onCheckedChange={(checked) =>
+                      onCheckedChange={(checked: boolean | "indeterminate") =>
                         setDestructViews(checked === true)
                       }
                       className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500 w-5 h-5"
@@ -751,7 +769,7 @@ export default function UploadPage() {
                     <Checkbox
                       id="destruct-time"
                       checked={destructTime}
-                      onCheckedChange={(checked) =>
+                      onCheckedChange={(checked: boolean | "indeterminate") =>
                         setDestructTime(checked === true)
                       }
                       className="data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500 w-5 h-5"
