@@ -369,3 +369,17 @@ body {
     background-position: -200% 0;
   }
 }
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* small helper animation for the QR preview shimmer */
+.animate-shimmer {
+  animation: shimmer 1.2s linear infinite;
+}

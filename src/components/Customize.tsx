@@ -13,6 +13,7 @@ import {
   Check,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import QRScanPreview from "./QRScanPreview";
 import { Button } from "./ui/button";
 import {
   Select,
@@ -216,6 +217,10 @@ export default function CustomizePage() {
               <p className="text-sm text-muted-foreground mt-6 text-center">
                 Scan to preview your QR code
               </p>
+              {/* QR Scan Preview Simulator */}
+              <div className="mt-4 w-full">
+                <QRScanPreview value={qrValue} />
+              </div>
             </div>
 
             {/* Customization Controls */}
