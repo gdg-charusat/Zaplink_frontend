@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { Zap, Github, Twitter, Linkedin } from "lucide-react";
+import { SOCIAL_LINKS } from "@/lib/socialLinks";
 
 const navLinks = [
   { label: "Home", to: "/" },
@@ -12,20 +13,20 @@ const navLinks = [
 const socialLinks = [
   {
     label: "GitHub",
-    href: "https://github.com/gdg-charusat/Zaplink_frontend",
+    href: SOCIAL_LINKS.github,
     icon: Github,
   },
   {
     label: "Twitter / X",
-    href: "https://twitter.com/gdgcharusat",
+    href: SOCIAL_LINKS.twitter,
     icon: Twitter,
   },
   {
     label: "LinkedIn",
-    href: "https://linkedin.com/company/gdgcharusat",
+    href: SOCIAL_LINKS.linkedin,
     icon: Linkedin,
   },
-];
+].filter(({ href }) => Boolean(href));
 
 export default function Footer() {
   return (
