@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { Loader2, Shield, Clock, Eye, Zap, FileText, Link, Type as TypeIcon } from "lucide-react";
+import axios, { AxiosError } from "axios";
+import { Clock, Eye, FileText, Link, Loader2, Shield, Type as TypeIcon, Zap } from "lucide-react";
+import React, { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import AnimatedProgress from "./AnimatedProgress";
+import FileUpload from "./FileUpload";
+import StepIndicator from "./StepIndicator";
+import { Button } from "./ui/button";
+import { Checkbox } from "./ui/checkbox";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-import { Checkbox } from "./ui/checkbox";
-import { Button } from "./ui/button";
-import { toast } from "sonner";
-import axios, { AxiosError } from "axios";
 import { Switch } from "./ui/switch";
-import FileUpload from "./FileUpload";
 
 type FileType =
   | "image"
@@ -128,7 +130,7 @@ export default function UploadPage() {
     () => sessionStorage.getItem("timeValue") || ""
   );
   const [loading, setLoading] = useState(false);
-  const [currentStep] = useState(2);
+  const [currentStep, setCurrentStep] = useState(1);
   const [type, setType] = useState<FileType>(initialType);
   const [urlValue, setUrlValue] = useState("");
   const [textValue, setTextValue] = useState("");
@@ -189,6 +191,52 @@ export default function UploadPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
+  // Step validation logic
+  const hasContentForStep1 = Boolean(
+    (type === "url" && urlValue.trim()) ||
+    (type === "text" && textValue.trim()) ||
+    (type !== "url" && type !== "text" && uploadedFile)
+  );
+
+  const hasValidSecurityForStep2 = Boolean(
+    (!passwordProtect || password.trim()) &&
+    (!selfDestruct || 
+      (destructViews && viewsValue.trim()) || 
+      (destructTime && timeValue.trim())
+    )
+  );
+
+  const canProceedToStep2 = hasContentForStep1;
+  const canProceedToStep3 = qrName.trim() && hasContentForStep1 && hasValidSecurityForStep2;
+
+  // Auto-advance steps based on form completion
+  useEffect(() => {
+    if (hasContentForStep1 && currentStep === 1) {
+      setTimeout(() => {
+        setCurrentStep(2);
+        toast.success("Step 1 complete! Configure security options.");
+      }, 300);
+    }
+  }, [hasContentForStep1, currentStep]);
+
+  useEffect(() => {
+    if (canProceedToStep3 && currentStep === 2) {
+      setTimeout(() => {
+        setCurrentStep(3);
+        toast.success("Ready to generate QR code!");
+      }, 300);
+    } else if (!hasContentForStep1 && currentStep > 1) {
+      setCurrentStep(1);
+    } else if (!canProceedToStep3 && currentStep === 3) {
+      setCurrentStep(2);
+    }
+  }, [canProceedToStep3, hasContentForStep1, currentStep]);
+
+  // Completed steps tracker
+  const completedSteps = [];
+  if (hasContentForStep1) completedSteps.push(1);
+  if (canProceedToStep3) completedSteps.push(2);
+
   // Reset form state when file type changes
   useEffect(() => {
     setQrName("");
@@ -203,6 +251,7 @@ export default function UploadPage() {
     setUrlValue("");
     setTextValue("");
     setCompressPdf(false);
+    setCurrentStep(1);
   }, [type]);
 
   // After successful QR generation, store QR and form hash
@@ -571,25 +620,34 @@ export default function UploadPage() {
     <div className="min-h-screen flex flex-col bg-background">
       <main className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 max-w-4xl">
         <div className={`bg-card rounded-3xl shadow-lg p-6 sm:p-10 space-y-8 sm:space-y-12 border border-border transition-all duration-500 ease-out animate-fade-in`}>
+          
           {/* Step Indicator */}
-          <div className="flex items-center justify-between mb-8 sm:mb-12">
-            <span className="text-xs sm:text-sm text-primary font-semibold bg-primary/10 px-4 py-2 rounded-full">
-              Step {currentStep} of 3
-            </span>
-            <div className="flex-1 mx-4 sm:mx-6 h-2 bg-muted rounded-full overflow-hidden">
-              <div
-                className="progress-bar h-full transition-all duration-500 ease-in-out bg-gradient-to-r from-primary via-primary/80 to-primary shadow-md"
-                style={{ width: `${(currentStep / 3) * 100}%` }}
-              ></div>
+          <div className="space-y-6">
+            <StepIndicator
+              steps={[
+                { label: "Select Type", icon: <FileText className="h-5 w-5" /> },
+                { label: "Configure", icon: <Shield className="h-5 w-5" /> },
+                { label: "Generate", icon: <Zap className="h-5 w-5" /> },
+              ]}
+              currentStep={currentStep}
+              completedSteps={completedSteps}
+            />
+            
+            {/* Animated Progress Bar */}
+            <AnimatedProgress currentStep={currentStep} totalSteps={3} />
+            
+            {/* Step Label */}
+            <div className="text-center">
+              <span className="text-sm font-semibold text-primary">
+                {currentStep === 1 && "Select your content type"}
+                {currentStep === 2 && "Configure security options"}
+                {currentStep === 3 && "Generate your QR code"}
+              </span>
             </div>
-            <span className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2">
-              Customize
-              <Zap className="h-3 w-3 sm:h-4 sm:w-4" />
-            </span>
           </div>
 
           {/* QR Code Name */}
-          <div className="space-y-4">
+          <div className="space-y-4 animate-slide-in">
             <Label className="text-lg font-semibold text-foreground flex items-center gap-3">
               <div className="w-3 h-3 bg-primary rounded-full"></div>
               Name your QR Code
