@@ -85,7 +85,9 @@ export function InfiniteScrollList<T>({
   });
 
   // Virtual row count includes an extra row for loading/end indicator
-  const rowCount = items.length + (hasMore || error ? 1 : (!hasMore && items.length > 0 ? 1 : 0));
+  const rowCount =
+    items.length +
+    (hasMore || error ? 1 : !hasMore && items.length > 0 ? 1 : 0);
 
   const virtualizer = useVirtualizer({
     count: rowCount,
@@ -112,7 +114,14 @@ export function InfiniteScrollList<T>({
     const root = parentRef.current;
     const sentinel = sentinelRef.current;
 
-    if (!root || !sentinel || !hasMore || isFetchingMore || isLoading || error) {
+    if (
+      !root ||
+      !sentinel ||
+      !hasMore ||
+      isFetchingMore ||
+      isLoading ||
+      error
+    ) {
       return;
     }
 
@@ -126,7 +135,7 @@ export function InfiniteScrollList<T>({
       {
         root,
         rootMargin: `${estimateSize * loadMoreThreshold}px 0px`,
-      }
+      },
     );
 
     observer.observe(sentinel);
@@ -147,14 +156,14 @@ export function InfiniteScrollList<T>({
 
   // Debounced scroll fallback (for environments where observer can be delayed)
   const debouncedHandleScroll = useDebouncedCallback(
-    (scrollTop: number, scrollHeight: number, clientHeight: number) => {
+    ((scrollTop: number, scrollHeight: number, clientHeight: number) => {
       if (!hasMore || isFetchingMore || isLoading || error) return;
       const distanceToBottom = scrollHeight - scrollTop - clientHeight;
       if (distanceToBottom <= estimateSize * loadMoreThreshold) {
         loadMoreRef.current();
       }
-    },
-    120
+    }) as (...args: unknown[]) => void,
+    120,
   );
 
   const onScroll = useCallback(
@@ -163,10 +172,10 @@ export function InfiniteScrollList<T>({
       debouncedHandleScroll(
         target.scrollTop,
         target.scrollHeight,
-        target.clientHeight
+        target.clientHeight,
       );
     },
-    [debouncedHandleScroll]
+    [debouncedHandleScroll],
   );
 
   const virtualItems = virtualizer.getVirtualItems();
@@ -192,7 +201,12 @@ export function InfiniteScrollList<T>({
   // ─── Empty state ───
   if (!isLoading && items.length === 0 && !hasMore) {
     return (
-      <div className={cn("flex flex-col items-center justify-center py-20 text-muted-foreground", className)}>
+      <div
+        className={cn(
+          "flex flex-col items-center justify-center py-20 text-muted-foreground",
+          className,
+        )}
+      >
         <p className="text-lg font-medium">No items yet</p>
         <p className="text-sm mt-1">Items will appear here once created.</p>
       </div>
@@ -202,10 +216,7 @@ export function InfiniteScrollList<T>({
   return (
     <div
       ref={parentRef}
-      className={cn(
-        "h-full overflow-auto will-change-scroll",
-        className
-      )}
+      className={cn("h-full overflow-auto will-change-scroll", className)}
       onScroll={onScroll}
       {...pullHandlers}
     >
@@ -244,9 +255,7 @@ export function InfiniteScrollList<T>({
                 <div className="px-4">
                   {isFetchingMore && <LoadingMore />}
                   {error && <ErrorRetry message={error} onRetry={onRetry} />}
-                  {!hasMore && !error && !isFetchingMore && (
-                    <EndOfList />
-                  )}
+                  {!hasMore && !error && !isFetchingMore && <EndOfList />}
                 </div>
               ) : (
                 <div className="px-4 py-1.5">

@@ -39,7 +39,7 @@ export default function DelayedAccess({
   onUnlocked,
 }: DelayedAccessProps) {
   const [timeRemaining, setTimeRemaining] = useState(() =>
-    calculateTimeRemaining(unlockTime)
+    calculateTimeRemaining(unlockTime),
   );
   const [isUnlocked, setIsUnlocked] = useState(false);
 

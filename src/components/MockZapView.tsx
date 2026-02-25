@@ -27,14 +27,21 @@ export function MockZapView({ shortId }: MockZapViewProps) {
   ];
   const type = types[(index - 1) % types.length];
 
-  const typeColors: Record<string, { bg: string; text: string; label: string }> = {
+  const typeColors: Record<
+    string,
+    { bg: string; text: string; label: string }
+  > = {
     pdf: { bg: "bg-red-500/20", text: "text-red-400", label: "PDF" },
     image: { bg: "bg-blue-500/20", text: "text-blue-400", label: "Image" },
     video: { bg: "bg-purple-500/20", text: "text-purple-400", label: "Video" },
     audio: { bg: "bg-pink-500/20", text: "text-pink-400", label: "Audio" },
     url: { bg: "bg-green-500/20", text: "text-green-400", label: "URL" },
     text: { bg: "bg-yellow-500/20", text: "text-yellow-400", label: "Text" },
-    document: { bg: "bg-indigo-500/20", text: "text-indigo-400", label: "Document" },
+    document: {
+      bg: "bg-indigo-500/20",
+      text: "text-indigo-400",
+      label: "Document",
+    },
     presentation: {
       bg: "bg-orange-500/20",
       text: "text-orange-400",
@@ -117,7 +124,9 @@ export function MockZapView({ shortId }: MockZapViewProps) {
 
           {/* URL Section */}
           <div className="bg-card border border-border rounded-xl p-6 space-y-4">
-            <h2 className="text-lg font-semibold text-foreground">Shareable URL</h2>
+            <h2 className="text-lg font-semibold text-foreground">
+              Shareable URL
+            </h2>
             <div className="flex items-center gap-2 bg-muted/50 rounded-lg p-3">
               <input
                 type="text"
@@ -140,15 +149,19 @@ export function MockZapView({ shortId }: MockZapViewProps) {
           {/* Info Box */}
           <div className="bg-primary/10 border border-primary/20 rounded-xl p-6">
             <p className="text-sm text-foreground">
-              <strong>This is a demo item</strong> from mock data. In production,
-              this would show the actual shared file or link. Click{" "}
+              <strong>This is a demo item</strong> from mock data. In
+              production, this would show the actual shared file or link. Click{" "}
               <strong>Back</strong> to return to dashboard.
             </p>
           </div>
 
           {/* Action */}
           <div className="flex gap-4">
-            <Button onClick={() => navigate(-1)} variant="outline" className="flex-1">
+            <Button
+              onClick={() => navigate(-1)}
+              variant="outline"
+              className="flex-1"
+            >
               Back to My Zaps
             </Button>
             <Button onClick={() => navigate("/")} className="flex-1">

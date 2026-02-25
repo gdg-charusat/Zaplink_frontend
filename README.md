@@ -1,6 +1,8 @@
 # Zaplink — Secure QR Code & File Sharing Platform
 
-## 🔗 About Zaplink
+> ⚠️ **IMPORTANT**: This frontend requires a **backend server** running to work properly. See [BACKEND_SETUP.md](BACKEND_SETUP.md) for detailed instructions.
+
+## 🎯 About This Project
 
 Zaplink is an open-source platform that lets you transform any file, link, or text into a **secure, shareable QR code** — instantly. Whether it's a PDF report, a video, an image, or a URL, Zaplink wraps it in a unique short link and QR code that you can share anywhere.
 
@@ -38,33 +40,111 @@ Zaplink also lets you **customize your QR code** with frames, logos, and styles 
 - Node.js (v18 or higher)
 - npm
 - Git
+- **Backend Server** (REQUIRED - must be running before testing uploads)
 
-### Installation
+### Installation & Setup
 
-1. **Fork this repository** by clicking the "Fork" button at the top right
+#### Step 1: Clone & Install Frontend
+```bash
+# Fork and clone your fork
+git clone https://github.com/YOUR-USERNAME/Zaplink_frontend.git
+cd Zaplink_frontend
 
-2. **Clone your fork**
-   ```bash
-   git clone https://github.com/YOUR-USERNAME/Zaplink_frontend.git
-   cd Zaplink_frontend
-   ```
+# Add upstream remote
+git remote add upstream https://github.com/gdg-charusat/Zaplink_frontend.git
 
-3. **Add upstream remote**
-   ```bash
-   git remote add upstream https://github.com/gdg-charusat/Zaplink_frontend.git
-   ```
+# Install dependencies
+npm install
+```
 
-4. **Install dependencies**
-   ```bash
-   npm install
-   ```
+#### Step 2: Get the Backend Running (CRITICAL!)
 
-5. **Start development server**
-   ```bash
-   npm run dev
-   ```
+The frontend **REQUIRES** a backend server running on `http://localhost:5000` for uploads to work.
 
-The app will be running at `http://localhost:5173` 🎉
+##### Option A: Backend in Sibling Directory (Recommended)
+```bash
+# In a NEW terminal, from parent directory
+cd ..
+git clone https://github.com/gdg-charusat/Zaplink_backend.git
+cd Zaplink_backend
+
+# Install and start backend
+npm install
+npm start
+```
+
+✅ Backend should now be running on `http://localhost:5000`
+
+##### Option B: Backend on Different Port
+Create `.env` file in frontend directory:
+```env
+VITE_BACKEND_URL=http://localhost:3000
+```
+
+Replace `3000` with your actual backend port, then start frontend.
+
+##### Option C: Using Docker
+```bash
+cd ../Zaplink_backend
+docker build -t zaplink-backend .
+docker run -p 5000:5000 zaplink-backend
+```
+
+#### Step 3: Start Development Frontend
+
+In the `Zaplink_frontend` directory (in a NEW terminal):
+```bash
+npm run dev
+```
+
+✅ Frontend will open at `http://localhost:5173`
+
+### ✓ Verify Setup is Correct
+
+Open browser DevTools (F12) and check the console:
+
+**✅ Success - You should see:**
+```
+ℹ Development Mode: Using Vite proxy for /api routes
+📍 Proxy target: http://localhost:5000 (default)
+```
+
+**❌ Error - If you see:**
+```
+Failed to load resource: the server responded with a status of 500 (Internal Server Error)
+AggregateError [ECONNREFUSED]
+```
+
+**This means:** Backend is NOT running! Follow Step 2 again.
+
+### 🛠 Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| **Upload returns 404** | Backend not running. Start it: `cd ../Zaplink_backend && npm start` |
+| **ECONNREFUSED error** | Backend not running on port 5000. Check `npm start` output in backend terminal |
+| **Backend on different port** | Create `.env`: `VITE_BACKEND_URL=http://localhost:YOUR_PORT` |
+| **"Cannot find module" errors** | Run `npm install` in both frontend AND backend |
+| **Port 5000 already in use** | Either kill that process or use a different port with `.env` config |
+
+### 📝 Common Development Flow
+
+```bash
+# Terminal 1: Backend
+cd ../Zaplink_backend
+npm start
+# Should show: Server running on http://localhost:5000
+
+# Terminal 2: Frontend  
+cd ../Zaplink_frontend
+npm run dev
+# Should show: Local: http://localhost:5173
+```
+
+### 🔄 After Changes
+
+- **Frontend changes**: Automatically reload in browser
+- **Backend changes**: Restart the backend server (Ctrl+C, then `npm start`)
 
 ---
 
