@@ -77,7 +77,6 @@ function getFormDataHash({
   qrName,
   uploadedFile,
   passwordProtect,
-  password,
   selfDestruct,
   destructViews,
   destructTime,
@@ -86,12 +85,11 @@ function getFormDataHash({
   urlValue,
   textValue,
   type,
-}: FormDataHash) {
+}: Omit<FormDataHash, "password">) {
   return JSON.stringify({
     qrName,
     fileName: uploadedFile?.name || null,
     passwordProtect,
-    password,
     selfDestruct,
     destructViews,
     destructTime,
@@ -258,7 +256,7 @@ export default function UploadPage() {
           qrName,
           uploadedFile,
           passwordProtect,
-          password,
+         
           selfDestruct,
           destructViews,
           destructTime,
@@ -578,26 +576,23 @@ export default function UploadPage() {
 
   // Add this useEffect after state declarations
   useEffect(() => {
-    // check for last zap in local storage
-    const lastZapStr = localStorage.getItem("lastZap");
-    if (lastZapStr) {
-      const lastQR = JSON.parse(lastZapStr);
-      // Only restore if current state is empty
-      // We check the refs or assume it's mount time
-      setQrName(lastQR.name || "");
-      setPasswordProtect(!!lastQR.password);
-      setPassword(lastQR.password || "");
-      setSelfDestruct(!!lastQR.selfDestruct);
-      setDestructViews(!!lastQR.viewLimit);
-      setDestructTime(!!lastQR.expiresAt);
-      setViewsValue(lastQR.viewLimit ? String(lastQR.viewLimit) : "");
-      setTimeValue(lastQR.expiresAt ? String(lastQR.expiresAt) : "");
-      setUrlValue(lastQR.originalUrl || "");
-      setTextValue(lastQR.textContent || "");
-      setType(lastQR.type ? lastQR.type.toLowerCase() : "file");
-      // Note: File cannot be restored for security reasons
-    }
-  }, []); // Run only once on mount to restore previous session state
+  const lastZapStr = localStorage.getItem("lastZap");
+  if (lastZapStr) {
+    const lastQR = JSON.parse(lastZapStr);
+
+    setQrName(lastQR.name || "");
+    setPasswordProtect(false); // never auto-restore password
+    setPassword(""); // ensure password is cleared
+    setSelfDestruct(!!lastQR.selfDestruct);
+    setDestructViews(!!lastQR.viewLimit);
+    setDestructTime(!!lastQR.expiresAt);
+    setViewsValue(lastQR.viewLimit ? String(lastQR.viewLimit) : "");
+    setTimeValue(lastQR.expiresAt ? String(lastQR.expiresAt) : "");
+    setUrlValue(lastQR.originalUrl || "");
+    setTextValue(lastQR.textContent || "");
+    setType(lastQR.type ? lastQR.type.toLowerCase() : "file");
+  }
+}, []);// Run only once on mount to restore previous session state
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
