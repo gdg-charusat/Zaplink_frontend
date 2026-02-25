@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Copy, Check } from "lucide-react";
+import { toast } from "sonner"; // 1. Added import
 
 interface CopyButtonProps {
     text: string;
@@ -12,6 +13,7 @@ export default function CopyButton({ text }: CopyButtonProps) {
         try {
             await navigator.clipboard.writeText(text);
             setCopied(true);
+            toast.success("Copied to clipboard!"); // 2. Added success toast
             setTimeout(() => setCopied(false), 2000);
         } catch {
             // Fallback for browsers without clipboard API support
@@ -25,6 +27,7 @@ export default function CopyButton({ text }: CopyButtonProps) {
             document.execCommand("copy");
             document.body.removeChild(textarea);
             setCopied(true);
+            toast.success("Copied to clipboard!"); // 3. Added success toast
             setTimeout(() => setCopied(false), 2000);
         }
     };

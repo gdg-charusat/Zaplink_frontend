@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import Home from "./components/Home";
 import UploadPage from "./components/UploadPage";
@@ -5,14 +6,14 @@ import Customize from "./components/Customize";
 import HowItWorks from "./components/HowItWorks";
 import AboutUs from "./components/AboutUs";
 import ViewZap from "./components/ViewZap";
-import NotFound from "./pages/NotFound";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import Terms from "./pages/Terms";
+import UrlShortenerPage from "./components/UrlShortenerPage";
+import Dashboard from "./components/Dashboard";
 // import UrlShortenerPage from "./components/UrlShortenerPage";
 import { Analytics } from "@vercel/analytics/react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ScrollToTop from "./components/ScrollToTop";
+import { validateEnvironment } from "./lib/environment";
 
 // Wrapper for ViewZap to show logo-only navbar if password is required
 function ViewZapWrapper() {
@@ -28,6 +29,11 @@ function ViewZapWrapper() {
 }
 
 export default function App() {
+  useEffect(() => {
+    // Validate environment configuration on app startup
+    validateEnvironment();
+  }, []);
+
   return (
     <>
       <Routes>
@@ -82,28 +88,28 @@ export default function App() {
           }
         />
         <Route path="/zaps/:shortId" element={<ViewZapWrapper />} />
-        {/* // <Route path="/url-shortener" element={<UrlShortenerPage />} /> */}
         <Route
-          path="/privacy"
+          path="/url-shortener"
           element={
             <>
               <Navbar />
-              <PrivacyPolicy />
+              <UrlShortenerPage />
               <Footer />
             </>
           }
         />
         <Route
-          path="/terms"
+          path="/dashboard"
           element={
             <>
               <Navbar />
-              <Terms />
-              <Footer />
+              <Dashboard />
             </>
           }
         />
-        <Route path="*" element={<NotFound />} />
+        {/* <Route path="/privacy" element={<><Navbar /><PrivacyPolicy /><Footer /></>} /> */}
+        {/* <Route path="/terms" element={<><Navbar /><Terms /><Footer /></>} /> */}
+        {/* <Route path="*" element={<NotFound />} /> */}
       </Routes>
       <ScrollToTop />
       <Analytics />

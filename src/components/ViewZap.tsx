@@ -1,10 +1,13 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
-import axios, { AxiosError } from "axios";
+import { viewZap, type ApiError } from "../services/api";
+import axios from "axios";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Shield, AlertTriangle, Home, Lock, Loader2 } from "lucide-react";
+import AccessQuiz from "./AccessQuiz";
+import DelayedAccess from "./DelayedAccess";
 
 function getErrorMessage(errorParam: string | null) {
   if (!errorParam) return null;
@@ -16,6 +19,12 @@ function getErrorMessage(errorParam: string | null) {
     return "This link does not exist or has expired.";
   if (errorParam === "incorrect_password")
     return "Incorrect password. Please try again.";
+  if (errorParam === "quiz_required")
+    return "This file requires a quiz answer to access.";
+  if (errorParam === "quiz_incorrect")
+    return "Incorrect quiz answer. Please try again.";
+  if (errorParam === "delayed_access")
+    return "This file is temporarily locked and will be available later.";
   return "An unexpected error occurred. Please try again later.";
 }
 
@@ -24,14 +33,26 @@ function getErrorHeading(errorParam: string | null) {
   if (errorParam === "viewlimit") return "View Limit Exceeded";
   if (errorParam === "notfound") return "Not Found";
   if (errorParam === "incorrect_password") return "Incorrect Password";
+  if (errorParam === "quiz_required") return "Quiz Required";
+  if (errorParam === "quiz_incorrect") return "Incorrect Answer";
+  if (errorParam === "delayed_access") return "File Locked";
   return "Access Denied";
 }
 
 function getErrorIcon(errorParam: string | null) {
-  if (errorParam === "expired") return AlertTriangle;
-  if (errorParam === "viewlimit") return AlertTriangle;
-  if (errorParam === "notfound") return AlertTriangle;
-  if (errorParam === "incorrect_password") return Lock;
+  if (
+    errorParam === "expired" ||
+    errorParam === "viewlimit" ||
+    errorParam === "notfound"
+  )
+    return AlertTriangle;
+  if (
+    errorParam === "incorrect_password" ||
+    errorParam === "quiz_required" ||
+    errorParam === "quiz_incorrect"
+  )
+    return Lock;
+  if (errorParam === "delayed_access") return AlertTriangle;
   return AlertTriangle;
 }
 
@@ -47,11 +68,52 @@ export default function ViewZap() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
 
+  // ── Quiz States
+  const [quizRequired, setQuizRequired] = useState(false);
+  const [quizQuestion, setQuizQuestion] = useState<string | null>(null);
+
+  // ── Delayed Access States
+  const [delayedAccessLocked, setDelayedAccessLocked] = useState(false);
+  const [unlockTime, setUnlockTime] = useState<Date | null>(null);
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const errorParam = params.get("error");
+
+    // Handle quiz required
+    if (errorParam === "quiz_required") {
+      const question = params.get("question");
+      if (question) {
+        setQuizRequired(true);
+        setQuizQuestion(decodeURIComponent(question));
+        setLoading(false);
+        return;
+      }
+    }
+
+    // Handle delayed access locked
+    if (errorParam === "delayed_access") {
+      const unlockTimeStr = params.get("unlockTime");
+      if (unlockTimeStr) {
+        setDelayedAccessLocked(true);
+        setUnlockTime(new Date(unlockTimeStr));
+        setLoading(false);
+        return;
+      }
+    }
+
     const errorMsg = getErrorMessage(errorParam);
     if (errorMsg) {
+      if (errorParam === "quiz_incorrect") {
+        const question = params.get("question");
+        if (question) {
+          setQuizRequired(true);
+          setQuizQuestion(decodeURIComponent(question));
+          toast.error("Incorrect answer. Please try again.");
+          setLoading(false);
+          return;
+        }
+      }
       if (errorParam === "incorrect_password") {
         setPasswordRequired(true);
         setPasswordError(errorMsg);
@@ -64,6 +126,7 @@ export default function ViewZap() {
       setLoading(false);
       return;
     }
+
     const fetchZap = async () => {
       setLoading(true);
       setError(null);
@@ -71,42 +134,42 @@ export default function ViewZap() {
       setPasswordRequired(false);
       setPasswordError(null);
       try {
-        const response = await axios.get(
-          `${import.meta.env.VITE_BACKEND_URL}/api/zaps/${shortId}`
-        );
-        // If successful, the backend will redirect or serve the file.
-        if (response.data) {
-          window.location.href = response.data.url;
+        if (!shortId) {
+          setError("Invalid link.");
+          setLoading(false);
+          return;
         }
-      } catch (err) {
-        const error = err as AxiosError<{ message: string }>;
-        if (error.response?.status === 401) {
+        const response = await viewZap(shortId);
+        // If successful, the backend will redirect or serve the file.
+        if (response?.url) {
+          window.location.href = response.url;
+          return;
+        }
+        setError("File URL not available.");
+        setLoading(false);
+      } catch (err: any) {
+        const error = err as ApiError;
+        if (error.status === 401) {
           // Check if it's a password required error
-          if (
-            error.response.data?.message
-              ?.toLowerCase()
-              .includes("password required")
-          ) {
+          if (error.message?.toLowerCase().includes("password required")) {
             setPasswordRequired(true);
             setLoading(false);
             return;
           } else if (
-            error.response.data?.message
-              ?.toLowerCase()
-              .includes("incorrect password")
+            error.message?.toLowerCase().includes("incorrect password")
           ) {
             setPasswordError("Incorrect password. Please try again.");
             setPasswordRequired(true);
             setLoading(false);
             return;
           }
-        } else if (error.response?.status === 410) {
+        } else if (error.status === 410) {
           setError("This link has expired. The file is no longer available.");
           setErrorType("expired");
           toast.error(
-            "This link has expired. The file is no longer available."
+            "This link has expired. The file is no longer available.",
           );
-        } else if (error.response?.status === 404) {
+        } else if (error.status === 404) {
           setError("This link does not exist or has expired.");
           setErrorType("notfound");
           toast.error("This link does not exist or has expired.");
@@ -132,24 +195,50 @@ export default function ViewZap() {
     // eslint-disable-next-line
   }, [passwordRequired]);
 
+  const handleQuizCorrect = (zapData: { url?: string }) => {
+    if (zapData?.url) {
+      window.location.href = zapData.url;
+      return;
+    }
+    window.location.reload();
+  };
+
+  const handleFileUnlocked = () => {
+    // Refetch the file after delay unlock
+    window.location.reload();
+  };
+
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setVerifying(true);
     setPasswordError(null);
     try {
-      const response = await axios.get(
-        `${import.meta.env.VITE_BACKEND_URL}/api/zaps/${shortId}`,
-        {
-          params: { password },
-          headers: {
-            Accept: "application/json",
-          },
-        }
-      );
-
+      if (!shortId) {
+        setPasswordError("Invalid link.");
+        setVerifying(false);
+        return;
+      }
+      const apiUrl = import.meta.env.VITE_BACKEND_URL
+        ? `${import.meta.env.VITE_BACKEND_URL}/api/zaps/${shortId}`
+        : `/api/zaps/${shortId}`;
+      const response = await axios.get(apiUrl, {
+        params: { password },
+        headers: {
+          Accept: "application/json",
+        },
+      });
       // Handle successful response
       if (response.data) {
         const { type, url, content, data, name } = response.data;
+
+        // Escape HTML entities for security
+        const escapeHtml = (unsafe: string) =>
+          unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
 
         if (
           type === "redirect" ||
@@ -159,7 +248,7 @@ export default function ViewZap() {
           type === "audio"
         ) {
           // Redirect to the URL
-          window.location.href = url;
+          window.location.href = url || "";
         } else if (type === "text" || type === "document") {
           // Escape HTML entities for security
           const escapeHtml = (unsafe: string) =>
@@ -169,7 +258,7 @@ export default function ViewZap() {
               .replace(/>/g, "&gt;")
               .replace(/"/g, "&quot;")
               .replace(/'/g, "&#039;");
-          const escapedContent = escapeHtml(content);
+          const escapedContent = escapeHtml(content || "");
           const escapedName = escapeHtml(name || "Untitled");
           // Use the backend's dark theme template
           const html = `
@@ -250,17 +339,23 @@ export default function ViewZap() {
             newWindow.document.close();
           }
         } else if (type === "image") {
-          // Display image
+          // Display image with sanitized values
+          const escapedImageName = escapeHtml(name || "Image");
+          // Validate data URL to prevent javascript: or other dangerous protocols
+          const isSafeUrl =
+            typeof data === "string" &&
+            (data.startsWith("data:") || data.startsWith("https://"));
+          const safeData = isSafeUrl ? data : "";
           const newWindow = window.open("", "_blank");
           if (newWindow) {
             newWindow.document.write(`
               <!DOCTYPE html>
               <html>
               <head>
-                <title>${name || "Image"}</title>
+                <title>${escapedImageName}</title>
               </head>
               <body style="margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh;">
-                <img src="${data}" alt="${name || "Image"}" style="max-width: 100%; max-height: 100vh;">
+                <img src="${safeData}" alt="${escapedImageName}" style="max-width: 100%; max-height: 100vh;">
               </body>
               </html>
             `);
@@ -268,34 +363,29 @@ export default function ViewZap() {
           }
         }
       }
-    } catch (err) {
-      const error = err as AxiosError<{ message: string }>;
+    } catch (err: any) {
+      const error = err as ApiError;
       if (
-        error.response &&
-        error.response.status === 401 &&
-        error.response.data?.message?.toLowerCase().includes("incorrect password")
+        error.status === 401 &&
+        error.message?.toLowerCase().includes("incorrect password")
       ) {
         setPasswordError("Incorrect password. Please try again.");
       } else if (
-        error.response &&
-        error.response.status === 401 &&
-        error.response.data?.message?.toLowerCase().includes("password required")
+        error.status === 401 &&
+        error.message?.toLowerCase().includes("password required")
       ) {
         setPasswordError("Password required.");
-      } else if (
-        error.response &&
-        (error.response.status === 410 || error.response.status === 403)
-      ) {
+      } else if (error.status === 410 || error.status === 403) {
         setError("View limit exceeded. This file is no longer accessible.");
         setErrorType("viewlimit");
         toast.error("View limit exceeded. This file is no longer accessible.");
-      } else if (error.response && error.response.status === 404) {
+      } else if (error.status === 404) {
         setError("This link does not exist or has expired.");
         setErrorType("notfound");
         toast.error("This link does not exist or has expired.");
       } else {
         setPasswordError(
-          "An unexpected error occurred. Please try again later."
+          "An unexpected error occurred. Please try again later.",
         );
       }
     } finally {
@@ -313,6 +403,24 @@ export default function ViewZap() {
           </div>
         </div>
       </div>
+    );
+  }
+
+  // ── Show Quiz Component
+  if (quizRequired && quizQuestion) {
+    return (
+      <AccessQuiz
+        shortId={shortId || ""}
+        question={quizQuestion}
+        onQuizCorrect={handleQuizCorrect}
+      />
+    );
+  }
+
+  // ── Show Delayed Access Component
+  if (delayedAccessLocked && unlockTime) {
+    return (
+      <DelayedAccess unlockTime={unlockTime} onUnlocked={handleFileUnlocked} />
     );
   }
 
