@@ -5,12 +5,9 @@ import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Shield, AlertTriangle, Home, Lock, Loader2 } from "lucide-react";
-<<<<<<< feature/quiz_access
 import AccessQuiz from "./AccessQuiz";
 import DelayedAccess from "./DelayedAccess";
-=======
 import { MockZapView } from "./MockZapView";
->>>>>>> main
 
 function getErrorMessage(errorParam: string | null) {
   if (!errorParam) return null;
@@ -142,11 +139,11 @@ export default function ViewZap() {
         }
       } catch (err) {
         const error = err as AxiosError<{ message: string; error: string; question?: string; unlockTime?: string }>;
-        
+
         // Handle 423 (Locked/Delayed Access) responses
         if (error.response?.status === 423) {
           const message = error.response.data?.message || "";
-          
+
           // Check if it's a quiz required error
           if (error.response.data?.error === "quiz_required") {
             setQuizRequired(true);
@@ -154,11 +151,11 @@ export default function ViewZap() {
             setLoading(false);
             return;
           }
-          
+
           // Check if it's a delayed access lock
           // Try to extract unlock time from message or use provided unlockTime
           let unlockedAt: Date | null = null;
-          
+
           // First try to use the unlockTime field if available
           if (error.response.data?.unlockTime) {
             unlockedAt = new Date(error.response.data.unlockTime);
@@ -170,7 +167,7 @@ export default function ViewZap() {
               unlockedAt = new Date(isoMatch[1]);
             }
           }
-          
+
           if (unlockedAt) {
             setDelayedAccessLocked(true);
             setUnlockTime(unlockedAt);
@@ -178,7 +175,7 @@ export default function ViewZap() {
             return;
           }
         }
-        
+
         if (error.response?.status === 401) {
           // Check if it's a password required error
           if (
@@ -231,7 +228,7 @@ export default function ViewZap() {
     // eslint-disable-next-line
   }, [passwordRequired]);
 
-  const handleQuizCorrect = (ZapData: {url: string}) => {
+  const handleQuizCorrect = (ZapData: { url: string }) => {
     // Redirect to the URL
     window.location.href = ZapData.url;
   };
@@ -424,7 +421,6 @@ export default function ViewZap() {
     );
   }
 
-<<<<<<< feature/quiz_access
   // ── Show Quiz Component 
   if (quizRequired && quizQuestion) {
     return (
@@ -441,11 +437,11 @@ export default function ViewZap() {
     return (
       <DelayedAccess unlockTime={unlockTime} onUnlocked={handleFileUnlocked} />
     );
-=======
+  }
+
   // Show mock view for demo items
   if (shortId?.startsWith("mock")) {
     return <MockZapView shortId={shortId} />;
->>>>>>> main
   }
 
   if (passwordRequired) {
@@ -467,7 +463,7 @@ export default function ViewZap() {
               placeholder="Enter password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="input-focus text-base rounded-xl border-border bg-background h-14 px-6 font-medium text-lg focus-ring"
+              className="input-focus rounded-xl border-border bg-background h-14 px-6 font-medium text-lg focus-ring"
               disabled={verifying}
               autoFocus
             />

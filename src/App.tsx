@@ -11,6 +11,9 @@ import { Analytics } from "@vercel/analytics/react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ScrollToTop from "./components/ScrollToTop";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Terms from "./pages/Terms";
+import NotFound from "./pages/NotFound";
 
 // Wrapper for ViewZap to show logo-only navbar if password is required
 function ViewZapWrapper() {

@@ -9,7 +9,7 @@ import { toast } from "sonner";
 interface AccessQuizProps {
   shortId: string;
   question: string;
-  onQuizCorrect: (quizAnswer: string) => void;
+  onQuizCorrect: (responseData: { url: string }) => void;
   onError?: (error: string) => void;
 }
 
@@ -119,11 +119,10 @@ export default function AccessQuiz({
             {/* Status Messages */}
             {submitted && (
               <div
-                className={`flex items-center gap-3 p-4 rounded-xl ${
-                  isCorrect
+                className={`flex items-center gap-3 p-4 rounded-xl ${isCorrect
                     ? "bg-green-500/10 border border-green-500/30"
                     : "bg-red-500/10 border border-red-500/30"
-                }`}
+                  }`}
               >
                 {isCorrect ? (
                   <>

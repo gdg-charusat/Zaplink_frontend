@@ -5,23 +5,32 @@
 
 :root {
   /* Light theme (default) - soft, warm colors */
-  --background: 0 0% 98%; /* #fafafa - soft off-white */
-  --foreground: 222 84% 4.9%; /* #0f172a - dark slate */
-  --card: 0 0% 100%; /* pure white for cards */
+  --background: 0 0% 98%;
+  /* #fafafa - soft off-white */
+  --foreground: 222 84% 4.9%;
+  /* #0f172a - dark slate */
+  --card: 0 0% 100%;
+  /* pure white for cards */
   --card-foreground: 222 84% 4.9%;
   --popover: 0 0% 100%;
   --popover-foreground: 222 84% 4.9%;
-  --primary: 142.1 76.2% 36.3%; /* green-600 */
+  --primary: 142.1 76.2% 36.3%;
+  /* green-600 */
   --primary-foreground: 355.7 100% 97.3%;
-  --secondary: 210 40% 96%; /* slate-50 */
+  --secondary: 210 40% 96%;
+  /* slate-50 */
   --secondary-foreground: 222.2 84% 4.9%;
-  --muted: 210 40% 96%; /* slate-50 */
-  --muted-foreground: 215.4 16.3% 46.9%; /* slate-500 */
-  --accent: 210 40% 94%; /* slate-100 */
+  --muted: 210 40% 96%;
+  /* slate-50 */
+  --muted-foreground: 215.4 16.3% 46.9%;
+  /* slate-500 */
+  --accent: 210 40% 94%;
+  /* slate-100 */
   --accent-foreground: 222.2 84% 4.9%;
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 0 0% 98%;
-  --border: 214.3 31.8% 91.4%; /* slate-200 */
+  --border: 214.3 31.8% 91.4%;
+  /* slate-200 */
   --input: 214.3 31.8% 91.4%;
   --ring: 142.1 76.2% 36.3%;
   --radius: 0.75rem;
@@ -29,23 +38,28 @@
 
 .dark {
   /* Dark theme overrides */
-  --background: 222 47% 11%; /* slate-900 */
+  --background: 222 47% 11%;
+  /* slate-900 */
   --foreground: 210 40% 98%;
-  --card: 222 47% 15%; /* slate-800 */
+  --card: 222 47% 15%;
+  /* slate-800 */
   --card-foreground: 210 40% 98%;
   --popover: 222 47% 13%;
   --popover-foreground: 210 40% 98%;
   --primary: 142.1 76.2% 36.3%;
   --primary-foreground: 355.7 100% 97.3%;
-  --secondary: 217.2 32.6% 17.5%; /* slate-700 */
+  --secondary: 217.2 32.6% 17.5%;
+  /* slate-700 */
   --secondary-foreground: 210 40% 98%;
   --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%; /* slate-400 */
+  --muted-foreground: 215 20.2% 65.1%;
+  /* slate-400 */
   --accent: 217.2 32.6% 17.5%;
   --accent-foreground: 210 40% 98%;
   --destructive: 0 62.8% 30.6%;
   --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%; /* slate-700 */
+  --border: 217.2 32.6% 17.5%;
+  /* slate-700 */
   --input: 217.2 32.6% 17.5%;
   --ring: 142.1 76.2% 36.3%;
 }
@@ -101,11 +115,9 @@ body {
 
 /* Enhanced button styles */
 .btn-primary {
-  background: linear-gradient(
-    135deg,
-    hsl(var(--primary)) 0%,
-    hsl(var(--primary) / 0.9) 100%
-  );
+  background: linear-gradient(135deg,
+      hsl(var(--primary)) 0%,
+      hsl(var(--primary) / 0.9) 100%);
   box-shadow: 0 4px 12px hsl(var(--primary) / 0.25);
   transition: all 0.2s ease;
 }
@@ -154,11 +166,9 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(
-    135deg,
-    hsl(var(--primary) / 0.02) 0%,
-    transparent 50%
-  );
+  background: linear-gradient(135deg,
+      hsl(var(--primary) / 0.02) 0%,
+      transparent 50%);
   opacity: 0;
   transition: opacity 0.3s ease;
   border-radius: 14px;
@@ -172,7 +182,7 @@ body {
 
 .content-type-card:hover {
   transform: translateY(-4px);
-  box-shadow: 
+  box-shadow:
     0 16px 32px rgba(0, 0, 0, 0.12),
     0 0 20px hsl(var(--primary) / 0.2),
     inset 0 0 20px hsl(var(--primary) / 0.08);
@@ -183,7 +193,7 @@ body {
 }
 
 .dark .content-type-card:hover {
-  box-shadow: 
+  box-shadow:
     0 16px 32px rgba(0, 0, 0, 0.4),
     0 0 20px hsl(var(--primary) / 0.25),
     inset 0 0 20px hsl(var(--primary) / 0.1);
@@ -193,9 +203,11 @@ body {
   0% {
     background-position: 0% 50%;
   }
+
   50% {
     background-position: 100% 50%;
   }
+
   100% {
     background-position: 0% 50%;
   }
@@ -205,7 +217,7 @@ body {
 .content-type-card:focus-visible {
   outline: none;
   transform: translateY(-4px);
-  box-shadow: 
+  box-shadow:
     0 16px 32px rgba(0, 0, 0, 0.12),
     0 0 24px hsl(var(--primary) / 0.3);
 }
@@ -220,7 +232,7 @@ body {
 }
 
 .dark .content-type-card:focus-visible {
-  box-shadow: 
+  box-shadow:
     0 16px 32px rgba(0, 0, 0, 0.4),
     0 0 24px hsl(var(--primary) / 0.35);
 }
@@ -237,11 +249,9 @@ body {
 
 /* Progress bar */
 .progress-bar {
-  background: linear-gradient(
-    90deg,
-    hsl(var(--primary)) 0%,
-    hsl(var(--primary) / 0.8) 100%
-  );
+  background: linear-gradient(90deg,
+      hsl(var(--primary)) 0%,
+      hsl(var(--primary) / 0.8) 100%);
   border-radius: 9999px;
   transition: width 0.3s ease;
 }
@@ -265,11 +275,9 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(
-    circle at top left,
-    hsl(var(--primary) / 0.03) 0%,
-    transparent 50%
-  );
+  background: radial-gradient(circle at top left,
+      hsl(var(--primary) / 0.03) 0%,
+      transparent 50%);
   opacity: 0;
   transition: opacity 0.2s ease;
   pointer-events: none;
@@ -305,11 +313,9 @@ body {
   left: 0;
   right: 0;
   bottom: 0;
-  background: radial-gradient(
-    circle at top right,
-    hsl(var(--primary) / 0.04) 0%,
-    transparent 60%
-  );
+  background: radial-gradient(circle at top right,
+      hsl(var(--primary) / 0.04) 0%,
+      transparent 60%);
   opacity: 0;
   transition: opacity 0.3s ease;
   pointer-events: none;
@@ -329,6 +335,7 @@ body {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -342,22 +349,18 @@ body {
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(
-    135deg,
-    hsl(var(--foreground)) 0%,
-    hsl(var(--muted-foreground)) 100%
-  );
+  background: linear-gradient(135deg,
+      hsl(var(--foreground)) 0%,
+      hsl(var(--muted-foreground)) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
 .gradient-text-primary {
-  background: linear-gradient(
-    135deg,
-    hsl(var(--primary)) 0%,
-    hsl(var(--primary) / 0.8) 100%
-  );
+  background: linear-gradient(135deg,
+      hsl(var(--primary)) 0%,
+      hsl(var(--primary) / 0.8) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -391,6 +394,7 @@ body {
   0% {
     background-position: -400px 0;
   }
+
   100% {
     background-position: 400px 0;
   }
@@ -400,9 +404,12 @@ body {
 .ptr-spring {
   transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 /* File upload card animation */
 .file-card-enter {
   animation: fileCardEnter 0.3s ease-out;
+}
+
 /* ---- Team 125 Enhancement: Animated Step Progress ---- */
 .progress-bar {
   background-size: 200% 100%;
@@ -418,4 +425,3 @@ body {
     background-position: -200% 0;
   }
 }
-

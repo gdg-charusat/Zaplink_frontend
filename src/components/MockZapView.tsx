@@ -43,7 +43,6 @@ export function MockZapView({ shortId }: MockZapViewProps) {
   };
 
   const color = typeColors[type] || typeColors.pdf;
-  const createdAt = new Date(Date.now() - (index - 1) * 60_000);
   const relativeTime = index === 1 ? "just now" : `${index}m ago`;
   const mockUrl = `https://example.com/demo-${index}`;
   const viewCount = (index * 3) % 120;

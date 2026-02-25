@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Loader2, Shield, Clock, Eye, Zap, FileText, Link, Type as TypeIcon, X } from "lucide-react";
 import {
   Loader2,
   Shield,
@@ -10,6 +9,7 @@ import {
   FileText,
   Link,
   Type as TypeIcon,
+  X,
 } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -19,6 +19,8 @@ import { toast } from "sonner";
 import axios, { AxiosError } from "axios";
 import { Switch } from "./ui/switch";
 import FileUpload from "./FileUpload";
+import { ImageCompressionControl } from "./ImageCompressionControl";
+import { optimizeImage, isOptimizableImage, formatBytes, type CompressionLevel } from "../lib/image-optimizer";
 
 type FileType =
   | "image"
@@ -143,6 +145,14 @@ export default function UploadPage() {
   const [urlValue, setUrlValue] = useState("");
   const [textValue, setTextValue] = useState("");
   const [compressPdf, setCompressPdf] = useState(false);
+
+  // Image Compression States
+  const [imageCompressionLevel, setImageCompressionLevel] = useState<CompressionLevel>("medium");
+  const [originalImageSize, setOriginalImageSize] = useState(0);
+  const [optimizedImageSize, setOptimizedImageSize] = useState(0);
+  const [isOptimizingImage, setIsOptimizingImage] = useState(false);
+  const [originalImageFile, setOriginalImageFile] = useState<File | null>(null);
+
   const [lastQR, setLastQR] = useState(() => {
     try {
       const data = sessionStorage.getItem("lastQR");
@@ -259,7 +269,48 @@ export default function UploadPage() {
     setUrlValue("");
     setTextValue("");
     setCompressPdf(false);
+    // Reset image compression states
+    setImageCompressionLevel("medium");
+    setOriginalImageSize(0);
+    setOptimizedImageSize(0);
+    setIsOptimizingImage(false);
+    setOriginalImageFile(null);
   }, [type]);
+
+  // Re-optimize image when compression level changes
+  const prevCompressionLevelRef = useRef<CompressionLevel>(imageCompressionLevel);
+
+  useEffect(() => {
+    // Only re-optimize if level actually changed (not on initial file upload)
+    if (prevCompressionLevelRef.current === imageCompressionLevel) {
+      return;
+    }
+    prevCompressionLevelRef.current = imageCompressionLevel;
+
+    if (type !== "image" || !originalImageFile || !isOptimizableImage(originalImageFile)) {
+      return;
+    }
+
+    const reOptimize = async () => {
+      setIsOptimizingImage(true);
+      try {
+        const optimized = await optimizeImage(originalImageFile, imageCompressionLevel);
+        setOptimizedImageSize(optimized.size);
+        setUploadedFile(optimized);
+
+        const saved = Math.round((1 - optimized.size / originalImageFile.size) * 100);
+        if (saved > 0) {
+          toast.success(`Re-optimized: ${formatBytes(optimized.size)} (-${saved}%)`);
+        }
+      } catch (error) {
+        console.error("Image re-optimization failed:", error);
+      } finally {
+        setIsOptimizingImage(false);
+      }
+    };
+
+    reOptimize();
+  }, [imageCompressionLevel, originalImageFile, type]);
 
   // After successful QR generation, store QR and form hash
   const handleGenerateAndContinue = async () => {
@@ -618,50 +669,50 @@ export default function UploadPage() {
   const MAX_SIZE_MB = type === "video" ? 100 : 10;
   const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
-  const handleFilesFromUploader = (files: File[]) => {
+  const handleFilesFromUploader = async (files: File[]) => {
     if (files.length === 0) return;
     const file = files[0];
 
     if (file.size > MAX_SIZE_BYTES) {
       toast.error(
-        `${
-          type.charAt(0).toUpperCase() + type.slice(1)
+        `${type.charAt(0).toUpperCase() + type.slice(1)
         } files must be ≤${MAX_SIZE_MB}MB.`,
       );
       return;
     }
 
-    setUploadedFile(file);
-    if (!qrName) {
-      setQrName(file.name);
-    }
-  };
+    // Handle image optimization
+    if (type === "image" && isOptimizableImage(file)) {
+      setOriginalImageFile(file);
+      setOriginalImageSize(file.size);
+      setIsOptimizingImage(true);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > MAX_SIZE_BYTES) {
-      toast.error(
-        `${
-          type.charAt(0).toUpperCase() + type.slice(1)
-        } files must be ≤${MAX_SIZE_MB}MB.`,
-      );
-      e.target.value = "";
-      return;
-    }
-    if (type === "pdf" && compressPdf) {
-      // Placeholder: compress PDF client-side
-      // const compressed = await compressPDF(file, 10 * 1024 * 1024);
-      // setUploadedFile(compressed);
-      toast.info(
-        "PDF compression is not yet implemented. Uploading original file.",
-      );
-      setUploadedFile(file);
-      if (!qrName) {
-        setQrName(file.name);
+      try {
+        const optimized = await optimizeImage(file, imageCompressionLevel);
+        setOptimizedImageSize(optimized.size);
+        setUploadedFile(optimized);
+
+        // Show success notification with size reduction
+        const saved = Math.round((1 - optimized.size / file.size) * 100);
+        if (saved > 0) {
+          toast.success(`Optimized: ${formatBytes(optimized.size)} (-${saved}%)`);
+        }
+      } catch (error) {
+        console.error("Image optimization failed:", error);
+        // Fall back to original file
+        setUploadedFile(file);
+        setOptimizedImageSize(file.size);
+        toast.info("Using original image (optimization not available)");
+      } finally {
+        setIsOptimizingImage(false);
       }
     } else {
-      setUploadedFile(null);
+      setOriginalImageFile(null);
+      setUploadedFile(file);
+    }
+
+    if (!qrName) {
+      setQrName(file.name);
     }
   };
 
@@ -744,7 +795,7 @@ export default function UploadPage() {
                 placeholder="Enter a memorable name..."
                 value={qrName}
                 onChange={handleQrNameChange}
-                className="input-focus text-base rounded-xl border-border bg-background h-14 px-6 pr-12 font-medium text-lg focus-ring"
+                className="input-focus rounded-xl border-border bg-background h-14 px-6 pr-12 font-medium text-lg focus-ring"
               />
               {qrName && (
                 <button
@@ -776,7 +827,7 @@ export default function UploadPage() {
                   value={urlValue}
                   onChange={(e) => setUrlValue(e.target.value)}
                   placeholder="https://example.com"
-                  className="input-focus text-base rounded-xl border-border bg-background h-14 px-6 pr-12 text-lg focus-ring"
+                  className="input-focus rounded-xl border-border bg-background h-14 px-6 pr-12 text-lg focus-ring"
                 />
                 {urlValue && (
                   <button
@@ -870,6 +921,18 @@ export default function UploadPage() {
                   >
                     Compress PDF before upload
                   </label>
+                </div>
+              )}
+
+              {type === "image" && (
+                <div className="pl-6">
+                  <ImageCompressionControl
+                    level={imageCompressionLevel}
+                    onChange={setImageCompressionLevel}
+                    originalSize={originalImageSize}
+                    optimizedSize={optimizedImageSize}
+                    isOptimizing={isOptimizingImage}
+                  />
                 </div>
               )}
             </div>
@@ -1161,20 +1224,20 @@ export default function UploadPage() {
           {/* Continue to QR Button */}
           {lastQR &&
             lastQRFormHash ===
-              getFormDataHash({
-                qrName,
-                uploadedFile,
-                passwordProtect,
-                password,
-                selfDestruct,
-                destructViews,
-                destructTime,
-                viewsValue,
-                timeValue,
-                urlValue,
-                textValue,
-                type,
-              }) && (
+            getFormDataHash({
+              qrName,
+              uploadedFile,
+              passwordProtect,
+              password,
+              selfDestruct,
+              destructViews,
+              destructTime,
+              viewsValue,
+              timeValue,
+              urlValue,
+              textValue,
+              type,
+            }) && (
               <div className="w-full flex justify-center">
                 <Button
                   className="w-full max-w-md h-14 bg-secondary text-secondary-foreground hover:bg-secondary/80 rounded-xl font-semibold transition-all duration-300 hover:scale-[1.02] focus-ring"
