@@ -332,10 +332,11 @@ export default function ViewZap() {
           // Display image with sanitized values
           const escapedImageName = escapeHtml(name || "Image");
           // Validate data URL to prevent javascript: or other dangerous protocols
+          const imageData = (data as unknown) as string | undefined;
           const isSafeUrl =
-            typeof data === "string" &&
-            (data.startsWith("data:") || data.startsWith("https://"));
-          const safeData = isSafeUrl ? data : "";
+            typeof imageData === "string" &&
+            (imageData.startsWith("data:") || imageData.startsWith("https://"));
+          const safeData = isSafeUrl ? imageData : "";
           const newWindow = window.open("", "_blank");
           if (newWindow) {
             newWindow.document.write(`

@@ -56,6 +56,12 @@ const ZapAnalytics: React.FC = () => {
 
   useEffect(() => {
     const fetchAnalytics = async () => {
+      if (!shortId) {
+        setError("Invalid Zap ID");
+        toast.error("Invalid Zap ID");
+        setLoading(false);
+        return;
+      }
       try {
         setLoading(true);
         setError(null);
