@@ -11,6 +11,7 @@ import {
   Palette,
   Sparkles,
   Check,
+  BarChart3,
   Trash2,
   Shield,
   AlertTriangle,
@@ -296,6 +297,269 @@ export default function CustomizePage() {
                   <Share2 />
                   Share
                 </Button>
+                    <SelectItem value="rounded" className="rounded-lg">
+                      Rounded Corners
+                    </SelectItem>
+                    <SelectItem value="circle" className="rounded-lg">
+                      Circle
+                    </SelectItem>
+                    <SelectItem value="shadow" className="rounded-lg">
+                      Shadow
+                    </SelectItem>
+                    <SelectItem value="gradient" className="rounded-lg">
+                      Gradient
+                    </SelectItem>
+                    <SelectItem value="border" className="rounded-lg">
+                      Accent Border
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Foreground Color Picker */}
+              <div className="space-y-4">
+                <Label htmlFor="fg-color" className="text-base font-semibold text-foreground flex items-center gap-2">
+                  <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                  QR Foreground Color
+                </Label>
+
+                <input
+                  id="fg-color"
+                  type="color"
+                  value={fgColor}
+                  onChange={(e) => {
+                    setFgColor(e.target.value);
+                    setAnimateQR(true);
+                    setTimeout(() => setAnimateQR(false), 400);
+                  }}
+                  className="w-20 h-12 cursor-pointer rounded-md border border-border bg-background"
+                  title="Choose QR code foreground color"
+                />
+              </div>
+
+              {/* Logo Upload */}
+              <div className="space-y-4">
+                <Label
+                  htmlFor="logo-upload"
+                  className="text-base font-semibold text-foreground flex items-center gap-2"
+                >
+                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                  Upload Logo (Optional)
+                </Label>
+                <div
+                  className="relative border-2 border-dashed rounded-2xl p-6 text-center transition-all duration-300 cursor-pointer border-border bg-muted/20 hover:border-primary/50 hover:bg-primary/5 backdrop-blur-sm"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                    id="logo-upload"
+                    accept="image/*"
+                    title="Upload logo image"
+                    aria-label="Upload logo image for QR code"
+                  />
+                  {logo ? (
+                    <div className="flex items-center justify-center space-x-3">
+                      <img
+                        src={logo}
+                        alt="Logo Preview"
+                        className="h-16 w-16 object-contain rounded-lg"
+                      />
+                      <span className="text-foreground font-medium">
+                        Logo uploaded
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLogo(null);
+                          toast.info("Logo removed"); // Feedback for logo removal
+                        }}
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg focus-ring"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>{" "}
+                      {/* Ensure this closing tag is present */}
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="p-3 bg-primary/10 rounded-xl">
+                        <Upload className="h-8 w-8 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          Click to upload image
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          PNG, JPG up to 2MB
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="space-y-6 pt-6 border-t border-border">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-green-500/10 rounded-lg">
+                    <Sparkles className="h-5 w-5 text-green-500" />
+                  </div>
+                  <h2 className="text-xl font-bold text-foreground">Actions</h2>
+                </div>
+
+                {/* Inline Short URL display with Copy button */}
+                <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-muted/30">
+                  <span
+                    className="flex-1 truncate text-sm text-muted-foreground font-mono select-all"
+                    title={qrValue}
+                  >
+                    {qrValue}
+                  </span>
+                  <CopyButton text={qrValue} />
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  <Button
+                    onClick={handleDownload}
+                    className="h-14 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-semibold rounded-xl transition-all duration-300 hover:scale-[1.02] shadow-lg hover:shadow-xl focus-ring"
+                  >
+                    <Download className="h-5 w-5 mr-2" />
+                    Download QR Code
+                  </Button>
+                  <Link
+                    to={`/zaps/${state?.shortUrl?.split('/').pop() || ''}/analytics`}
+                    className="h-14 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white font-semibold rounded-xl transition-all duration-300 hover:scale-[1.02] shadow-lg hover:shadow-xl focus-ring flex items-center justify-center"
+                  >
+                    <BarChart3 className="h-5 w-5 mr-2" />
+                    View Analytics
+                  </Link>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button
+                      onClick={handleCopyLink}
+                      variant="outline"
+                      className="h-12 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary font-semibold rounded-xl transition-all duration-300 hover:scale-[1.02] bg-background focus-ring"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="h-4 w-4 mr-2" />
+                          <span className="hidden sm:inline">Copied!</span>
+                          <span className="sm:hidden">✓</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-4 w-4 mr-2" />
+                          <span className="hidden sm:inline">Copy Link</span>
+                          <span className="sm:hidden">Copy</span>
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      onClick={handleShare}
+                      variant="outline"
+                      className="h-12 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary font-semibold rounded-xl transition-all duration-300 hover:scale-[1.02] bg-background focus-ring"
+                    >
+                      <Share2 className="h-4 w-4 mr-2" />
+                      Share
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Deletion Token Section */}
+                {state?.deletionToken && (
+                  <div className="space-y-4 pt-4 border-t border-border/50">
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 space-y-3">
+                      <div className="flex items-start gap-3">
+                        <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 space-y-2">
+                          <h3 className="text-sm font-bold text-amber-600 dark:text-amber-500">
+                            Save Your Deletion Token
+                          </h3>
+                          <p className="text-xs text-muted-foreground">
+                            This token is required to delete your Zap later. Save it
+                            securely - you won't be able to retrieve it again!
+                          </p>
+
+                          {/* Token Display */}
+                          <div className="flex items-center gap-2 p-3 bg-background/50 rounded-lg border border-border">
+                            <Shield className="h-4 w-4 text-primary flex-shrink-0" />
+                            <code className="flex-1 text-xs font-mono break-all select-all">
+                              {showToken
+                                ? state.deletionToken
+                                : "•".repeat(Math.min(state.deletionToken.length, 40))}
+                            </code>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setShowToken(!showToken)}
+                              className="h-8 w-8 flex-shrink-0"
+                              title={showToken ? "Hide token" : "Show token"}
+                            >
+                              {showToken ? (
+                                <EyeOff className="h-4 w-4" />
+                              ) : (
+                                <Eye className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+
+                          {/* Token Actions */}
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={handleCopyToken}
+                              className="h-9 rounded-lg text-xs"
+                            >
+                              {tokenCopied ? (
+                                <>
+                                  <Check className="h-3 w-3 mr-1.5" />
+                                  Copied!
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="h-3 w-3 mr-1.5" />
+                                  Copy Token
+                                </>
+                              )}
+                            </Button>
+                            {!tokenConfirmed && (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setTokenConfirmed(true);
+                                  toast.success("Token confirmed! Keep it safe.");
+                                }}
+                                className="h-9 rounded-lg text-xs"
+                              >
+                                <Check className="h-3 w-3 mr-1.5" />
+                                I've Saved It
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Delete Button */}
+                    <Button
+                      onClick={() => setDeleteModalOpen(true)}
+                      variant="destructive"
+                      className="w-full h-12 rounded-xl font-semibold transition-all duration-300 hover:scale-[1.02]"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete This Zap
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </div>

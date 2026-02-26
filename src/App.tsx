@@ -6,6 +6,11 @@ import Customize from "./components/Customize";
 import HowItWorks from "./components/HowItWorks";
 import AboutUs from "./components/AboutUs";
 import ViewZap from "./components/ViewZap";
+import ZapAnalytics from "./components/ZapAnalytics";
+import AnalyticsLookup from "./components/AnalyticsLookup";
+import NotFound from "./pages/NotFound";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import Terms from "./pages/Terms";
 import UrlShortenerPage from "./components/UrlShortenerPage";
 import Dashboard from "./components/Dashboard";
 // import UrlShortenerPage from "./components/UrlShortenerPage";
@@ -91,7 +96,28 @@ export default function App() {
             </>
           }
         />
+        <Route
+          path="/analytics"
+          element={
+            <>
+              <Navbar />
+              <AnalyticsLookup />
+              <Footer />
+            </>
+          }
+        />
         <Route path="/zaps/:shortId" element={<ViewZapWrapper />} />
+        <Route
+          path="/zaps/:shortId/analytics"
+          element={
+            <>
+              <Navbar />
+              <ZapAnalytics />
+              <Footer />
+            </>
+          }
+        />
+        {/* // <Route path="/url-shortener" element={<UrlShortenerPage />} /> */}
         <Route
           path="/url-shortener"
           element={

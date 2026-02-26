@@ -44,6 +44,13 @@ export default function Navbar({
                 <span className="absolute -bottom-1 left-3 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-[calc(100%-24px)]"></span>
               </Link>
               <Link
+                to="/analytics"
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105 relative group focus-ring rounded-lg px-3 py-2"
+              >
+                Analytics
+                <span className="absolute -bottom-1 left-3 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-[calc(100%-24px)]"></span>
+              </Link>
+              <Link
                 to="/url-shortener"
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105 relative group focus-ring rounded-lg px-3 py-2"
               >
@@ -102,6 +109,14 @@ export default function Navbar({
             >
               <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
               How it Works
+            </Link>
+            <Link
+              to="/analytics"
+              onClick={() => setIsOpen(false)}
+              className="text-base font-medium text-muted-foreground hover:text-foreground hover:bg-primary/5 p-3 rounded-xl transition-all duration-200 flex items-center gap-3"
+            >
+              <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
+              Analytics
             </Link>
             <Link
               to="/url-shortener"
