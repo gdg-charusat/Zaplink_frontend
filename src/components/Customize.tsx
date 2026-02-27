@@ -6,8 +6,6 @@ import {
   Download,
   Copy,
   Share2,
-  X,
-  Palette,
   Sparkles,
   Check,
 } from "lucide-react";

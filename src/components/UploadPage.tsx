@@ -6,6 +6,7 @@ import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
+import { uploadZap, type ApiError } from "../services/api";
 import axios, { AxiosError } from "axios";
 import { Switch } from "./ui/switch";
 import FileUpload from "./FileUpload";
@@ -95,6 +96,9 @@ function getFormDataHash({
 }
 
 export default function UploadPage() {
+  // Validation states for self-destruct inputs
+  const [viewsError, setViewsError] = useState("");
+  const [timeError, setTimeError] = useState("");
   const location = useLocation();
   const initialType = (location.state?.type as FileType) || "pdf";
   const navigate = useNavigate();
@@ -116,6 +120,32 @@ export default function UploadPage() {
   );
   const [timeValue, setTimeValue] = useState(
     () => sessionStorage.getItem("timeValue") || ""
+  );
+  const [enableAccessQuiz, setEnableAccessQuiz] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("enableAccessQuiz") || "false");
+    } catch {
+      return false;
+    }
+  });
+  const [quizQuestion, setQuizQuestion] = useState(
+    () => sessionStorage.getItem("quizQuestion") || "",
+  );
+  const [quizAnswer, setQuizAnswer] = useState(
+    () => sessionStorage.getItem("quizAnswer") || "",
+  );
+  const [enableDelayedAccess, setEnableDelayedAccess] = useState(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem("enableDelayedAccess") || "false");
+    } catch {
+      return false;
+    }
+  });
+  const [delayedAccessValue, setDelayedAccessValue] = useState(
+    () => sessionStorage.getItem("delayedAccessValue") || "",
+  );
+  const [delayedAccessType, setDelayedAccessType] = useState<"minutes" | "hours" | "days">(
+    () => (sessionStorage.getItem("delayedAccessType") as any) || "minutes",
   );
   const [loading, setLoading] = useState(false);
   const [type, setType] = useState<FileType>(initialType);
@@ -190,6 +220,22 @@ export default function UploadPage() {
 
   // After successful QR generation, store QR and form hash
   const handleGenerateAndContinue = async () => {
+    // Validate self-destruct views
+    if (selfDestruct && destructViews) {
+      if (!viewsValue.trim() || isNaN(Number(viewsValue)) || Number(viewsValue) < 1) {
+        setViewsError("Please enter a positive integer (min 1)");
+        toast.error("Invalid value for 'After Views'. Please enter a positive integer.");
+        return;
+      }
+    }
+    // Validate self-destruct time
+    if (selfDestruct && destructTime) {
+      if (!timeValue.trim() || isNaN(Number(timeValue)) || Number(timeValue) < 1) {
+        setTimeError("Please enter a positive integer (min 1)");
+        toast.error("Invalid value for 'After Time'. Please enter a positive integer.");
+        return;
+      }
+    }
     if (type === "url") {
       if (!urlValue || !/^https?:\/\//.test(urlValue)) {
         toast.error("Please enter a valid http:// or https:// link");
