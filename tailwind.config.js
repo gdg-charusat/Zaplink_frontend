@@ -52,6 +52,13 @@ export default {
         "fade-in": "fadeIn 0.4s ease-out",
         "scale-in": "scaleIn 0.3s ease-out",
         "slide-in-left": "slideInFromLeft 0.5s ease-out",
+        "scan-line": "scanLine 2s linear infinite",
+      },
+      keyframes: {
+        scanLine: {
+          "0%, 100%": { top: "0%" },
+          "50%": { top: "100%" },
+        },
       },
       boxShadow: {
         'glow': '0 0 20px rgba(34, 197, 94, 0.3)',

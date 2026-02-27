@@ -10,6 +10,7 @@ import ZapAnalytics from "./components/ZapAnalytics";
 import AnalyticsLookup from "./components/AnalyticsLookup";
 import UrlShortenerPage from "./components/UrlShortenerPage";
 import Dashboard from "./components/Dashboard";
+import Scan from "./components/Scan";
 import { Analytics } from "@vercel/analytics/react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
@@ -127,6 +128,16 @@ export default function App() {
             <>
               <Navbar />
               <Dashboard />
+            </>
+          }
+        />
+        <Route
+          path="/scan"
+          element={
+            <>
+              <Navbar />
+              <Scan />
+              <Footer />
             </>
           }
         />
