@@ -10,17 +10,17 @@ type ThemeProviderProps = {
 
 type ThemeProviderState = {
   theme: Theme;
-  setTheme: (theme: Theme) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setTheme: (theme: Theme | ((theme: Theme) => Theme)) => void;
   applySystemTheme: () => void;
 };
 
-const initialState: ThemeProviderState = {
-  theme: "dark",
-  setTheme: () => null,
-  applySystemTheme: () => null,
-};
+// REMOVED INITIAL STATE
 
-const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
+// eslint-disable-next-line react-refresh/only-export-components
+export const ThemeProviderContext = createContext<ThemeProviderState | undefined>(
+  undefined
+);
 
 export function ThemeProvider({
   children,
@@ -45,7 +45,9 @@ export function ThemeProvider({
           ? "dark"
           : "light";
       }
-    } catch {}
+    } catch {
+      // empty 
+    }
     return defaultTheme;
   };
 
@@ -71,16 +73,21 @@ export function ThemeProvider({
     try {
       localStorage.setItem(storageKey, sys);
       localStorage.setItem(explicitKey, "false");
-    } catch {}
+    } catch {
+      // empty 
+    }
     setExplicit(false);
     setThemeState(sys);
   };
 
-  const setTheme = (t: Theme) => {
+  const setTheme = (t: Theme | ((theme: Theme) => Theme)) => {
     try {
-      localStorage.setItem(storageKey, t);
+      const newTheme = typeof t === "function" ? t(theme) : t;
+      localStorage.setItem(storageKey, newTheme);
       localStorage.setItem(explicitKey, "true");
-    } catch {}
+    } catch {
+      // empty 
+    }
     setExplicit(true);
     setThemeState(t);
   };
@@ -96,10 +103,12 @@ export function ThemeProvider({
       };
       // old and new API support
       if (mq.addEventListener) mq.addEventListener("change", handler);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       else mq.addListener(handler as any);
 
       return () => {
         if (mq.removeEventListener) mq.removeEventListener("change", handler);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         else mq.removeListener(handler as any);
       };
     } catch {
@@ -120,6 +129,7 @@ export function ThemeProvider({
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useTheme = () => {
   const context = useContext(ThemeProviderContext);
 

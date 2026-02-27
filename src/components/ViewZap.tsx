@@ -75,8 +75,11 @@ export default function ViewZap() {
           `${import.meta.env.VITE_BACKEND_URL}/api/zaps/${shortId}`
         );
         // If successful, the backend will redirect or serve the file.
-        if (response.data) {
+        if (response.data && response.data.url) {
           window.location.href = response.data.url;
+        } else {
+          setError("File URL not available.");
+          setLoading(false);
         }
       } catch (err) {
         const error = err as AxiosError<{ message: string }>;
@@ -115,7 +118,6 @@ export default function ViewZap() {
           setErrorType(null);
           toast.error("An unexpected error occurred. Please try again later.");
         }
-      } finally {
         setLoading(false);
       }
     };
@@ -129,7 +131,7 @@ export default function ViewZap() {
         state: { ...location.state, passwordRequired: true },
       });
     }
-    // eslint-disable-next-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [passwordRequired]);
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {

@@ -21,6 +21,7 @@ export default function Scan() {
 
   const playBeep = () => {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
       const oscillator = audioCtx.createOscillator();
       const gainNode = audioCtx.createGain();
@@ -56,7 +57,7 @@ export default function Scan() {
       try {
         const url = new URL(data);
         window.location.href = url.href;
-      } catch (e) {
+      } catch {
         // Not a valid URL, maybe just text
         toast.info(`Decoded text: ${data}`);
         // Reset state after showing text
@@ -142,12 +143,16 @@ export default function Scan() {
         videoRef.current.play();
         requestRef.current = requestAnimationFrame(tick);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error starting camera:", err);
-      if (err.name === "NotAllowedError" || err.name === "SecurityError") {
-        setErrorMessage("Camera access was denied. Please update your browser permissions.");
-      } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
-        setErrorMessage("No camera found on this device.");
+      if (err instanceof Error) {
+        if (err.name === "NotAllowedError" || err.name === "SecurityError") {
+          setErrorMessage("Camera access was denied. Please update your browser permissions.");
+        } else if (err.name === "NotFoundError" || err.name === "DevicesNotFoundError") {
+          setErrorMessage("No camera found on this device.");
+        } else {
+          setErrorMessage("Failed to start the camera. Please try another method.");
+        }
       } else {
         setErrorMessage("Failed to start the camera. Please try another method.");
       }
@@ -177,6 +182,7 @@ export default function Scan() {
     return () => {
       stopCamera();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -189,6 +195,7 @@ export default function Scan() {
         setErrorMessage("");
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanMethod, selectedCameraId]);
 
   // Handle Image File Selection
@@ -294,8 +301,8 @@ export default function Scan() {
           <button
             onClick={() => setScanMethod("camera")}
             className={`flex-1 py-4 flex items-center justify-center gap-2 font-medium transition-all ${scanMethod === "camera"
-                ? "bg-primary/10 text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:bg-muted/50"
+              ? "bg-primary/10 text-primary border-b-2 border-primary"
+              : "text-muted-foreground hover:bg-muted/50"
               }`}
           >
             <Camera className="w-5 h-5" />
@@ -304,8 +311,8 @@ export default function Scan() {
           <button
             onClick={() => setScanMethod("image")}
             className={`flex-1 py-4 flex items-center justify-center gap-2 font-medium transition-all ${scanMethod === "image"
-                ? "bg-primary/10 text-primary border-b-2 border-primary"
-                : "text-muted-foreground hover:bg-muted/50"
+              ? "bg-primary/10 text-primary border-b-2 border-primary"
+              : "text-muted-foreground hover:bg-muted/50"
               }`}
           >
             <ImageIcon className="w-5 h-5" />
@@ -382,8 +389,8 @@ export default function Scan() {
             <div className="flex flex-col items-center justify-center min-h-[350px]">
               <div
                 className={`w-full max-w-sm aspect-square border-2 border-dashed rounded-xl flex flex-col items-center justify-center p-8 transition-all ${isDragActive
-                    ? "border-primary bg-primary/5 scale-105"
-                    : "border-border hover:border-primary/50 hover:bg-muted/20"
+                  ? "border-primary bg-primary/5 scale-105"
+                  : "border-border hover:border-primary/50 hover:bg-muted/20"
                   }`}
                 onDragOver={onDragOver}
                 onDragLeave={onDragLeave}
