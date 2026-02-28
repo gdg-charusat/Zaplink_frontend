@@ -62,7 +62,7 @@ interface FormDataHash {
   qrName: string;
   uploadedFile: File | null;
   passwordProtect: boolean;
-  password: string;
+
   selfDestruct: boolean;
   destructViews: boolean;
   destructTime: boolean;
@@ -77,7 +77,6 @@ function getFormDataHash({
   qrName,
   uploadedFile,
   passwordProtect,
-  password,
   selfDestruct,
   destructViews,
   destructTime,
@@ -86,12 +85,11 @@ function getFormDataHash({
   urlValue,
   textValue,
   type,
-}: FormDataHash) {
+}: Omit<FormDataHash, "password">) {
   return JSON.stringify({
     qrName,
     fileName: uploadedFile?.name || null,
     passwordProtect,
-    password,
     selfDestruct,
     destructViews,
     destructTime,
@@ -261,7 +259,6 @@ export default function UploadPage() {
           qrName,
           uploadedFile,
           passwordProtect,
-          password,
           selfDestruct,
           destructViews,
           destructTime,
@@ -382,7 +379,6 @@ export default function UploadPage() {
           qrName,
           uploadedFile,
           passwordProtect,
-          password,
           selfDestruct,
           destructViews,
           destructTime,
@@ -497,7 +493,6 @@ export default function UploadPage() {
         qrName,
         uploadedFile,
         passwordProtect,
-        password,
         selfDestruct,
         destructViews,
         destructTime,
@@ -582,7 +577,6 @@ export default function UploadPage() {
       qrName,
       uploadedFile,
       passwordProtect,
-      password,
       selfDestruct,
       destructViews,
       destructTime,
@@ -602,7 +596,6 @@ export default function UploadPage() {
     qrName,
     uploadedFile,
     passwordProtect,
-    password,
     selfDestruct,
     destructViews,
     destructTime,
@@ -641,16 +634,24 @@ export default function UploadPage() {
 
   // Handle files from the FileUpload component
   const handleFilesFromUploader = (files: File[]) => {
-    if (files.length > 0) {
-      const file = files[0]; // Use first file for backward compat
-      setUploadedFile(file);
-      if (!qrName) {
-        setQrName(file.name);
-      }
-    } else {
-      setUploadedFile(null);
+    if (files.length === 0) return;
+    const file = files[0];
+
+    if (file.size > MAX_SIZE_BYTES) {
+      toast.error(
+        `${type.charAt(0).toUpperCase() + type.slice(1)
+        } files must be ≤${MAX_SIZE_MB}MB.`,
+      );
+      return;
+    }
+
+    setUploadedFile(file);
+    if (!qrName) {
+      setQrName(file.name);
     }
   };
+
+  
 
   const handleUploadError = (error: string) => {
     toast.error(error);
@@ -673,40 +674,188 @@ export default function UploadPage() {
       (destructViews && viewsValue.trim()) ||
       (destructTime && timeValue.trim()));
 
-  // Add this useEffect after state declarations
+  const canGenerate = hasContent && hasValidName && hasValidSecurity;
+
+  // Calculate current step dynamically
+  const currentStep = !hasContent ? 1 : !hasValidName ? 2 : canGenerate ? 3 : 2;
+
+  // Track step completion for animations
+  const [completedSteps, setCompletedSteps] = useState<number[]>([]);
+  const [stepJustCompleted, setStepJustCompleted] = useState<number | null>(null);
+
+  // Update completed steps when progress is made
   useEffect(() => {
-    // check for last zap in local storage
-    const lastZapStr = localStorage.getItem("lastZap");
-    if (lastZapStr) {
-      const lastQR = JSON.parse(lastZapStr);
-      // Only restore if current state is empty
-      // We check the refs or assume it's mount time
-      setQrName(lastQR.name || "");
-      setPasswordProtect(!!lastQR.password);
-      setPassword(lastQR.password || "");
-      setSelfDestruct(!!lastQR.selfDestruct);
-      setDestructViews(!!lastQR.viewLimit);
-      setDestructTime(!!lastQR.expiresAt);
-      setViewsValue(lastQR.viewLimit ? String(lastQR.viewLimit) : "");
-      setTimeValue(lastQR.expiresAt ? String(lastQR.expiresAt) : "");
-      setUrlValue(lastQR.originalUrl || "");
-      setTextValue(lastQR.textContent || "");
-      setType(lastQR.type ? lastQR.type.toLowerCase() : "file");
-      // Note: File cannot be restored for security reasons
+    const newCompletedSteps: number[] = [];
+    if (hasContent) newCompletedSteps.push(1);
+    if (hasValidName) newCompletedSteps.push(2);
+    if (canGenerate) newCompletedSteps.push(3);
+
+    // Check for newly completed step
+    const justCompleted = newCompletedSteps.find(
+      (step) => !completedSteps.includes(step)
+    );
+
+    if (justCompleted) {
+      setStepJustCompleted(justCompleted);
+      toast.success(
+        justCompleted === 1
+          ? "✓ Content added!"
+          : justCompleted === 2
+            ? "✓ Name provided!"
+            : "✓ Ready to generate!",
+        { duration: 2000 }
+      );
+      setTimeout(() => setStepJustCompleted(null), 2000);
     }
-  }, []); // Run only once on mount to restore previous session state
+
+    setCompletedSteps(newCompletedSteps);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasContent, hasValidName, canGenerate]);
+
+
+  // check for last zap in local storage
+  // Restore last zap safely (without restoring password)
+  useEffect(() => {
+    const lastZapStr = localStorage.getItem("lastZap");
+
+    if (lastZapStr) {
+      try {
+        const lastQR = JSON.parse(lastZapStr);
+
+        setQrName(lastQR.name || "");
+
+        // 🚫 Never restore password for security reasons
+        setPasswordProtect(false);
+        setPassword("");
+
+        setSelfDestruct(!!lastQR.selfDestruct);
+        setDestructViews(!!lastQR.viewLimit);
+        setDestructTime(!!lastQR.expiresAt);
+        setViewsValue(lastQR.viewLimit ? String(lastQR.viewLimit) : "");
+        setTimeValue(lastQR.expiresAt ? String(lastQR.expiresAt) : "");
+        setUrlValue(lastQR.originalUrl || "");
+        setTextValue(lastQR.textContent || "");
+        setType(lastQR.type ? lastQR.type.toLowerCase() : "pdf");
+      } catch (error) {
+        console.warn("Failed to parse lastZap from localStorage:", error);
+        localStorage.removeItem("lastZap");
+      }
+    }
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <main className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 max-w-4xl">
-        <div className="bg-card rounded-3xl shadow-lg p-6 sm:p-10 space-y-8 sm:space-y-12 border border-border">
-          {/* Step Indicator */}
-          <div className="flex items-center justify-between mb-8 sm:mb-12">
-            <span className="text-xs sm:text-sm text-primary font-semibold bg-primary/10 px-4 py-2 rounded-full">
-              Step 2 of 3
-            </span>
-            <div className="flex-1 mx-4 sm:mx-6 h-2 bg-muted rounded-full overflow-hidden">
-              <div className="progress-bar h-full w-2/3"></div>
+        <div className={`bg-card rounded-3xl shadow-lg p-6 sm:p-10 space-y-8 sm:space-y-12 border border-border transition-all duration-500 ease-out animate-fade-in`}>
+          {/* Enhanced Step Indicator with Visual Feedback */}
+          <div className="space-y-6">
+            {/* Current Step Badge with Animation */}
+            <div className="flex items-center justify-between">
+              <span
+                className="text-xs sm:text-sm text-primary font-semibold bg-primary/10 px-4 py-2 rounded-full transition-all duration-300 transform hover:scale-105"
+                style={{
+                  animation: stepJustCompleted
+                    ? "pulse 0.5s ease-in-out"
+                    : "none",
+                }}
+              >
+                Step {currentStep} of 3
+              </span>
+              <span className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2">
+                {currentStep === 3 ? "Ready!" : "Customize"}
+                <Zap
+                  className={`h-3 w-3 sm:h-4 sm:w-4 transition-all duration-300 ${currentStep === 3 ? "text-primary animate-pulse" : ""
+                    }`}
+                />
+              </span>
+            </div>
+
+            {/* Visual Step Indicators */}
+            <div className="flex items-center gap-2 sm:gap-4">
+              {[1, 2, 3].map((step) => {
+                const isCompleted = completedSteps.includes(step);
+                const isActive = currentStep === step;
+                const stepLabels = [
+                  "Add Content",
+                  "Configure",
+                  "Generate",
+                ];
+
+                return (
+                  <div key={step} className="flex-1 flex items-center gap-2">
+                    <div className="flex-1 flex flex-col gap-2">
+                      {/* Step Circle */}
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-500 transform ${isCompleted
+                            ? "bg-primary text-primary-foreground scale-110 shadow-lg"
+                            : isActive
+                              ? "bg-primary/30 text-primary scale-105 ring-2 ring-primary ring-offset-2 ring-offset-background"
+                              : "bg-muted text-muted-foreground"
+                            } ${stepJustCompleted === step
+                              ? "animate-bounce"
+                              : ""
+                            }`}
+                          style={{
+                            animation:
+                              stepJustCompleted === step
+                                ? "bounce 0.5s ease-in-out"
+                                : "none",
+                          }}
+                        >
+                          {isCompleted ? (
+                            <span className="text-lg">✓</span>
+                          ) : (
+                            step
+                          )}
+                        </div>
+                        {/* Step Label - Hidden on mobile for space */}
+                        <span
+                          className={`hidden sm:block text-xs font-medium transition-all duration-300 ${isCompleted || isActive
+                            ? "text-foreground"
+                            : "text-muted-foreground"
+                            }`}
+                        >
+                          {stepLabels[step - 1]}
+                        </span>
+                      </div>
+                      {/* Progress Bar */}
+                      {step < 3 && (
+                        <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                          <div
+                            className={`h-full transition-all duration-700 ease-out ${isCompleted
+                              ? "bg-gradient-to-r from-primary via-primary/90 to-primary shadow-sm"
+                              : "bg-transparent"
+                              }`}
+                            style={{
+                              width: isCompleted ? "100%" : "0%",
+                            }}
+                          ></div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Mobile Step Labels */}
+            <div className="flex sm:hidden items-center justify-between px-2 text-xs text-muted-foreground">
+              <span
+                className={currentStep >= 1 ? "text-foreground font-medium" : ""}
+              >
+                Content
+              </span>
+              <span
+                className={currentStep >= 2 ? "text-foreground font-medium" : ""}
+              >
+                Configure
+              </span>
+              <span
+                className={currentStep >= 3 ? "text-foreground font-medium" : ""}
+              >
+                Generate
+              </span>
             </div>
             <span className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2">
               Customize
@@ -717,7 +866,10 @@ export default function UploadPage() {
           {/* QR Code Name */}
           <div className="space-y-4">
             <Label className="text-lg font-semibold text-foreground flex items-center gap-3">
-              <div className="w-3 h-3 bg-primary rounded-full"></div>
+              <div
+                className={`w-3 h-3 rounded-full transition-all duration-500 ${completedSteps.includes(2) ? "bg-primary shadow-lg" : "bg-primary/50"
+                  }`}
+              ></div>
               Name your QR Code
             </Label>
             <Input
@@ -731,7 +883,13 @@ export default function UploadPage() {
 
           {/* Content Input */}
           {type === "url" ? (
-            <div className="space-y-4">
+            <div
+              className="space-y-4 transition-all duration-500 transform"
+              style={{
+                opacity: currentStep >= 1 ? 1 : 0.8,
+                transform: currentStep >= 1 ? "translateY(0)" : "translateY(-10px)",
+              }}
+            >
               <Label
                 htmlFor="url"
                 className="text-lg font-semibold text-foreground flex items-center gap-3"
@@ -753,7 +911,13 @@ export default function UploadPage() {
               </p>
             </div>
           ) : type === "text" ? (
-            <div className="space-y-4">
+            <div
+              className="space-y-4 transition-all duration-500 transform"
+              style={{
+                opacity: currentStep >= 1 ? 1 : 0.8,
+                transform: currentStep >= 1 ? "translateY(0)" : "translateY(-10px)",
+              }}
+            >
               <Label
                 htmlFor="text"
                 className="text-lg font-semibold text-foreground flex items-center gap-3"
@@ -781,7 +945,13 @@ export default function UploadPage() {
               </div>
             </div>
           ) : (
-            <div className="space-y-6">
+            <div
+              className="space-y-6 transition-all duration-500 transform"
+              style={{
+                opacity: currentStep >= 1 ? 1 : 0.8,
+                transform: currentStep >= 1 ? "translateY(0)" : "translateY(-10px)",
+              }}
+            >
               <div className="space-y-4">
                 <Label
                   className="text-lg font-semibold text-foreground flex items-center gap-3"
@@ -823,8 +993,15 @@ export default function UploadPage() {
             </div>
           )}
 
-          {/* Security Options */}
-          <div className="space-y-8">
+          {/* Security Options with Animation */}
+          <div
+            className="space-y-8 transition-all duration-500 transform"
+            style={{
+              opacity: currentStep >= 2 ? 1 : 0.5,
+              transform: currentStep >= 2 ? "translateY(0)" : "translateY(10px)",
+              pointerEvents: currentStep >= 2 ? "auto" : "none",
+            }}
+          >
             <h3 className="text-2xl font-bold text-foreground flex items-center gap-3">
               <Shield className="h-6 w-6 text-primary" />
               Security Options
@@ -946,7 +1123,10 @@ export default function UploadPage() {
             <Button
               onClick={handleGenerateAndContinue}
               disabled={!canGenerate || loading}
-              className="w-full h-16 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-semibold text-xl rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 focus-ring"
+              className={`w-full h-16 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-semibold text-xl rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 focus-ring ${canGenerate && !loading
+                ? "animate-pulse-subtle ring-2 ring-primary/30"
+                : ""
+                }`}
             >
               {loading ? (
                 <>
@@ -969,7 +1149,6 @@ export default function UploadPage() {
               qrName,
               uploadedFile,
               passwordProtect,
-              password,
               selfDestruct,
               destructViews,
               destructTime,
