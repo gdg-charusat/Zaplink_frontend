@@ -6,10 +6,10 @@ import {
   Download,
   Copy,
   Share2,
-  X,
-  Palette,
   Sparkles,
   Check,
+  Palette,
+  X,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "./ui/button";
@@ -118,21 +118,32 @@ export default function CustomizePage() {
     const svgUrl = URL.createObjectURL(svgBlob);
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = 300;
-      canvas.height = 300;
-      const ctx = canvas.getContext("2d");
-      if (!ctx) return;
-      ctx.fillStyle = "#fff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const pngFile = canvas.toDataURL("image/png");
-      const downloadLink = document.createElement("a");
-      downloadLink.download = `zaplink-qr-${state?.name || "code"}.png`;
-      downloadLink.href = pngFile;
-      downloadLink.click();
-      URL.revokeObjectURL(svgUrl);
-      toast.success("Your QR code has been downloaded successfully.");
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 300;
+        canvas.height = 300;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          URL.revokeObjectURL(svgUrl);
+          toast.error(
+            "Failed to create canvas context. Please try again."
+          );
+          return;
+        }
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const pngFile = canvas.toDataURL("image/png");
+        const downloadLink = document.createElement("a");
+        downloadLink.download = `zaplink-qr-${state?.name || "code"}.png`;
+        downloadLink.href = pngFile;
+        downloadLink.click();
+        toast.success("Your QR code has been downloaded successfully.");
+      } catch {
+        toast.error("Failed to generate QR image. Please try again.");
+      } finally {
+        URL.revokeObjectURL(svgUrl);
+      }
     };
     img.src = svgUrl;
   };

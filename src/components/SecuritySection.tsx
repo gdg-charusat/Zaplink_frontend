@@ -70,13 +70,14 @@ export default function SecuritySection() {
       { threshold: 0.1 }
     );
 
-    if (sectionRef.current) {
-      observer.observe(sectionRef.current);
+    const currentSection = sectionRef.current;
+    if (currentSection) {
+      observer.observe(currentSection);
     }
 
     return () => {
-      if (sectionRef.current) {
-        observer.unobserve(sectionRef.current);
+      if (currentSection) {
+        observer.unobserve(currentSection);
       }
     };
   }, []);
@@ -90,9 +91,8 @@ export default function SecuritySection() {
       <div className="container mx-auto px-4 sm:px-6 max-w-7xl">
         {/* Section Header */}
         <div
-          className={`text-center mb-12 sm:mb-16 transition-all duration-700 ${
-            isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
-          }`}
+          className={`text-center mb-12 sm:mb-16 transition-all duration-700 ${isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-8"
+            }`}
         >
           <div className="inline-flex items-center gap-2 bg-green-500/10 text-green-600 dark:text-green-400 px-4 py-2 rounded-full text-sm font-medium mb-6">
             <Shield className="h-4 w-4" />
@@ -118,11 +118,10 @@ export default function SecuritySection() {
           {securityFeatures.map((feature, index) => (
             <article
               key={feature.id}
-              className={`security-card group transition-all duration-700 ${
-                isVisible
+              className={`security-card group transition-all duration-700 ${isVisible
                   ? "opacity-100 translate-y-0"
                   : "opacity-0 translate-y-8"
-              }`}
+                }`}
               style={{
                 transitionDelay: `${index * 100}ms`,
               }}
@@ -149,11 +148,10 @@ export default function SecuritySection() {
 
         {/* Privacy Policy Links */}
         <div
-          className={`text-center transition-all duration-700 ${
-            isVisible
+          className={`text-center transition-all duration-700 ${isVisible
               ? "opacity-100 translate-y-0"
               : "opacity-0 translate-y-8"
-          }`}
+            }`}
           style={{ transitionDelay: "600ms" }}
         >
           <div className="inline-flex flex-col sm:flex-row items-center gap-4 sm:gap-6 bg-card border border-border rounded-xl px-6 py-4">

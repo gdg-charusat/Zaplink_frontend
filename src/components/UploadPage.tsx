@@ -1,12 +1,22 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Loader2, Shield, Clock, Eye, Zap, FileText, Link, Type as TypeIcon, X } from "lucide-react";
+import axios, { AxiosError } from "axios";
+import {
+  Loader2,
+  Shield,
+  Clock,
+  Eye,
+  Zap,
+  FileText,
+  Link,
+  Type as TypeIcon,
+} from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
-import axios, { AxiosError } from "axios";
 import { Switch } from "./ui/switch";
 import FileUpload from "./FileUpload";
 
@@ -203,6 +213,7 @@ export default function UploadPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
+
   // Reset form state when file type changes
   useEffect(() => {
     setQrName("");
@@ -254,6 +265,20 @@ export default function UploadPage() {
     if (newErrors.password || newErrors.views || newErrors.expiry) {
       // Stop submission if there are validation errors
       return;
+  const handleGenerateAndContinue = async () => {
+    // Validate self-destruct views
+    if (selfDestruct && destructViews) {
+      if (!viewsValue.trim() || isNaN(Number(viewsValue)) || Number(viewsValue) < 1) {
+        toast.error("Invalid value for 'After Views'. Please enter a positive integer.");
+        return;
+      }
+    }
+    // Validate self-destruct time
+    if (selfDestruct && destructTime) {
+      if (!timeValue.trim() || isNaN(Number(timeValue)) || Number(timeValue) < 1) {
+        toast.error("Invalid value for 'After Time'. Please enter a positive integer.");
+        return;
+      }
     }
     if (type === "url") {
       if (!urlValue || !/^https?:\/\//.test(urlValue)) {
@@ -436,6 +461,7 @@ export default function UploadPage() {
         formData.append("expiresAt", expirationTime.toISOString());
       }
     }
+
 
     try {
       setLoading(true);
