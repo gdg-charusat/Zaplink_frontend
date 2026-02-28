@@ -78,21 +78,17 @@ export default function ViewZap() {
 
     const fetchZap = async () => {
       try {
-        const response = await axios.get(
+        const response = await axios.get<{ url?: string }>(
           `${import.meta.env.VITE_BACKEND_URL}/api/zaps/${shortId}`
         );
 
-
-        if (response.data?.url) {
-
-        // If successful, the backend will redirect or serve the file.
-        if (response.data && response.data.url) {
-
-          window.location.href = response.data.url;
-        } else {
-          setError("File URL not available.");
-          setLoading(false);
+        const fileUrl = response.data?.url;
+        if (fileUrl) {
+          window.location.href = fileUrl;
+          return;
         }
+
+        setError("File URL not available.");
       } catch (err) {
         const error = err as AxiosError<{ message: string }>;
 
@@ -116,6 +112,7 @@ export default function ViewZap() {
         } else {
           setError("An unexpected error occurred. Please try again later.");
         }
+      } finally {
         setLoading(false);
       }
     };
