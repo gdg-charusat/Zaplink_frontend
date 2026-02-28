@@ -380,6 +380,39 @@ export default function UploadPage() {
         setLastQRFormHash(formHash);
 
         toast.success("QR Code generated successfully!");
+        // Calculate expiration timestamp
+        let expiresAt: string | undefined;
+        if (selfDestruct && destructTime && timeValue.trim()) {
+          const expirationTime = new Date();
+          const hours = parseInt(timeValue);
+          if (!isNaN(hours)) {
+            expirationTime.setTime(
+              expirationTime.getTime() + hours * 60 * 60 * 1000,
+            );
+            expiresAt = expirationTime.toISOString();
+          }
+        }
+
+        // Calculate unlock timestamp
+        let unlockAt: string | undefined;
+        if (
+          enableDelayedAccess &&
+          delayedAccessValue.trim() &&
+          !isNaN(Number(delayedAccessValue))
+        ) {
+          const unlockTime = new Date();
+          let delaySeconds = parseInt(delayedAccessValue);
+          if (delayedAccessType === "hours") {
+            delaySeconds *= 60 * 60;
+          } else if (delayedAccessType === "days") {
+            delaySeconds *= 24 * 60 * 60;
+          } else if (delayedAccessType === "minutes") {
+            delaySeconds *= 60;
+          }
+          unlockTime.setTime(unlockTime.getTime() + delaySeconds * 1000);
+          unlockAt = unlockTime.toISOString();
+        }
+
         navigate("/customize", {
           state: {
             zapId: data.zapId,
@@ -388,11 +421,16 @@ export default function UploadPage() {
             type: data.type.toUpperCase(),
             name: data.name,
             deletionToken: data.deletionToken,
+            hasPassword: passwordProtect && password.trim().length > 0,
+            viewLimit: selfDestruct && destructViews && viewsValue.trim() ? parseInt(viewsValue) : undefined,
+            expiresAt,
+            quizQuestion: enableAccessQuiz && quizQuestion.trim() ? quizQuestion : undefined,
+            unlockAt,
+            originalUrl: urlValue || null,
           },
         });
       } catch (error: unknown) {
-        console.error("Upload error (URL):", error);
-        const err = error as AxiosError<{ message: string }>;
+        const err = error as ApiError;
         toast.error(
           `Upload failed: ${err.message}`
         );
@@ -477,6 +515,39 @@ export default function UploadPage() {
         setLastQRFormHash(formHash);
 
         toast.success("QR Code generated successfully!");
+        // Calculate expiration timestamp
+        let expiresAt2: string | undefined;
+        if (selfDestruct && destructTime && timeValue.trim()) {
+          const expirationTime = new Date();
+          const hours = parseInt(timeValue);
+          if (!isNaN(hours)) {
+            expirationTime.setTime(
+              expirationTime.getTime() + hours * 60 * 60 * 1000,
+            );
+            expiresAt2 = expirationTime.toISOString();
+          }
+        }
+
+        // Calculate unlock timestamp
+        let unlockAt2: string | undefined;
+        if (
+          enableDelayedAccess &&
+          delayedAccessValue.trim() &&
+          !isNaN(Number(delayedAccessValue))
+        ) {
+          const unlockTime = new Date();
+          let delaySeconds = parseInt(delayedAccessValue);
+          if (delayedAccessType === "hours") {
+            delaySeconds *= 60 * 60;
+          } else if (delayedAccessType === "days") {
+            delaySeconds *= 24 * 60 * 60;
+          } else if (delayedAccessType === "minutes") {
+            delaySeconds *= 60;
+          }
+          unlockTime.setTime(unlockTime.getTime() + delaySeconds * 1000);
+          unlockAt2 = unlockTime.toISOString();
+        }
+
         navigate("/customize", {
           state: {
             zapId: data.zapId,
@@ -485,6 +556,12 @@ export default function UploadPage() {
             type: data.type.toUpperCase(),
             name: data.name,
             deletionToken: data.deletionToken,
+            hasPassword: passwordProtect && password.trim().length > 0,
+            viewLimit: selfDestruct && destructViews && viewsValue.trim() ? parseInt(viewsValue) : undefined,
+            expiresAt: expiresAt2,
+            quizQuestion: enableAccessQuiz && quizQuestion.trim() ? quizQuestion : undefined,
+            unlockAt: unlockAt2,
+            originalUrl: null,
           },
         });
       } catch (error: unknown) {
@@ -590,6 +667,39 @@ export default function UploadPage() {
       setLastQRFormHash(formHash);
 
       toast.success("QR Code generated successfully!");
+      // Calculate expiration timestamp
+      let expiresAt3: string | undefined;
+      if (selfDestruct && destructTime && timeValue.trim()) {
+        const expirationTime = new Date();
+        const hours = parseInt(timeValue);
+        if (!isNaN(hours)) {
+          expirationTime.setTime(
+            expirationTime.getTime() + hours * 60 * 60 * 1000,
+          );
+          expiresAt3 = expirationTime.toISOString();
+        }
+      }
+
+      // Calculate unlock timestamp
+      let unlockAt3: string | undefined;
+      if (
+        enableDelayedAccess &&
+        delayedAccessValue.trim() &&
+        !isNaN(Number(delayedAccessValue))
+      ) {
+        const unlockTime = new Date();
+        let delaySeconds = parseInt(delayedAccessValue);
+        if (delayedAccessType === "hours") {
+          delaySeconds *= 60 * 60;
+        } else if (delayedAccessType === "days") {
+          delaySeconds *= 24 * 60 * 60;
+        } else if (delayedAccessType === "minutes") {
+          delaySeconds *= 60;
+        }
+        unlockTime.setTime(unlockTime.getTime() + delaySeconds * 1000);
+        unlockAt3 = unlockTime.toISOString();
+      }
+
       navigate("/customize", {
         state: {
           zapId: data.zapId,
@@ -598,6 +708,12 @@ export default function UploadPage() {
           type: data.type.toUpperCase(),
           name: data.name,
           deletionToken: data.deletionToken,
+          hasPassword: passwordProtect && password.trim().length > 0,
+          viewLimit: selfDestruct && destructViews && viewsValue.trim() ? parseInt(viewsValue) : undefined,
+          expiresAt: expiresAt3,
+          quizQuestion: enableAccessQuiz && quizQuestion.trim() ? quizQuestion : undefined,
+          unlockAt: unlockAt3,
+          originalUrl: null,
         },
       });
     } catch (error: unknown) {
@@ -605,7 +721,6 @@ export default function UploadPage() {
         toast.info("Upload canceled by user");
         return;
       }
-      console.error("Upload error (file):", error);
       const err = error as AxiosError<{ message: string }>;
       toast.error(
         `Upload failed: ${err.message}`

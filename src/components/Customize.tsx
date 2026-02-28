@@ -7,9 +7,6 @@ import {
   Download,
   Copy,
   Share2,
-  X,
-  Palette,
-  Sparkles,
   Check,
   BarChart3,
   Trash2,
@@ -18,6 +15,7 @@ import {
   Eye,
   EyeOff,
   PackageOpen,
+  Sparkles,
 } from "lucide-react";
 import DeleteZapModal from "./DeleteZapModal";
 import { QRCodeSVG } from "qrcode.react";
@@ -37,6 +35,7 @@ import ResolutionSelector from "./export/ResolutionSelector";
 import ExportPreview from "./export/ExportPreview";
 import type { ExportFormat } from "../lib/qr-export";
 import { exportQRCode, batchExport } from "../lib/qr-export";
+import QRScanPreview from "./QRScanPreview";
 
 /* ================= TYPES ================= */
 
@@ -55,6 +54,12 @@ type CustomizePageState = {
   type: string;
   name: string;
   deletionToken?: string;
+  hasPassword?: boolean;
+  viewLimit?: number;
+  expiresAt?: string;
+  quizQuestion?: string;
+  unlockAt?: string;
+  originalUrl?: string;
 };
 
 /* ================= COMPONENT ================= */
@@ -231,8 +236,8 @@ export default function CustomizePage() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
-            {/* Preview */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
+            {/* QR Code Preview */}
             <div className="flex flex-col items-center justify-center">
               <div className="bg-muted/20 p-10 rounded-3xl border border-border">
                 <div
@@ -259,8 +264,22 @@ export default function CustomizePage() {
               </div>
             </div>
 
+            {/* Scan Preview Panel */}
+            <div className="lg:col-span-1">
+              <QRScanPreview
+                name={state?.name || "Untitled Zap"}
+                type={state?.type || "UNIVERSAL"}
+                destinationUrl={state?.originalUrl || state?.shortUrl}
+                hasPassword={state?.hasPassword || false}
+                viewLimit={state?.viewLimit}
+                expiresAt={state?.expiresAt}
+                quizQuestion={state?.quizQuestion}
+                unlockAt={state?.unlockAt}
+              />
+            </div>
+
             {/* Controls */}
-            <div className="space-y-6">
+            <div className="lg:col-span-1 space-y-6">
               <Label>Frame Style</Label>
               <Select
                 value={frameStyle}
