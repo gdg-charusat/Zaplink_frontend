@@ -10,14 +10,12 @@ import {
   FileText,
   Link,
   Type as TypeIcon,
-  X,
 } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
-import { uploadZap, type ApiError } from "../services/api";
 import { Switch } from "./ui/switch";
 import FileUpload from "./FileUpload";
 
@@ -106,9 +104,6 @@ function getFormDataHash({
 }
 
 export default function UploadPage() {
-  // Validation states for self-destruct inputs
-  const [viewsError, setViewsError] = useState("");
-  const [timeError, setTimeError] = useState("");
   const location = useLocation();
   const initialType = (location.state?.type as FileType) || "pdf";
   const navigate = useNavigate();
@@ -208,7 +203,6 @@ export default function UploadPage() {
     // Validate self-destruct views
     if (selfDestruct && destructViews) {
       if (!viewsValue.trim() || isNaN(Number(viewsValue)) || Number(viewsValue) < 1) {
-        setViewsError("Please enter a positive integer (min 1)");
         toast.error("Invalid value for 'After Views'. Please enter a positive integer.");
         return;
       }
@@ -216,7 +210,6 @@ export default function UploadPage() {
     // Validate self-destruct time
     if (selfDestruct && destructTime) {
       if (!timeValue.trim() || isNaN(Number(timeValue)) || Number(timeValue) < 1) {
-        setTimeError("Please enter a positive integer (min 1)");
         toast.error("Invalid value for 'After Time'. Please enter a positive integer.");
         return;
       }
