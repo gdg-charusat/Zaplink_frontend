@@ -1,23 +1,16 @@
-import { useState, useRef } from "react";
-import CopyButton from "./CopyButton";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import React, { useState, useRef } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   Upload,
   Download,
   Copy,
   Share2,
-  X,
-  Palette,
-  Sparkles,
   Check,
-  Trash2,
-  Shield,
-  AlertTriangle,
-  Eye,
-  EyeOff,
+  PackageOpen,
+  Sparkles,
+  X,
 } from "lucide-react";
-import DeleteZapModal from "./DeleteZapModal";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "./ui/button";
 import {
@@ -29,6 +22,14 @@ import {
 } from "./ui/select";
 import { Label } from "./ui/label";
 import { toast } from "sonner";
+
+import FormatSelector from "./export/FormatSelector";
+import ResolutionSelector from "./export/ResolutionSelector";
+import ExportPreview from "./export/ExportPreview";
+import type { ExportFormat } from "../lib/qr-export";
+import QRScanPreview from "./QRScanPreview";
+
+/* ================= TYPES ================= */
 
 type FrameOption =
   | "none"
@@ -45,24 +46,29 @@ type CustomizePageState = {
   type: string;
   name: string;
   deletionToken?: string;
+  hasPassword?: boolean;
+  viewLimit?: number;
+  expiresAt?: string;
+  quizQuestion?: string;
+  unlockAt?: string;
+  originalUrl?: string;
 };
 
 export default function CustomizePage() {
   const location = useLocation();
-  const navigate = useNavigate();
   const state = (location.state as CustomizePageState) || null;
   const qrRef = useRef<HTMLDivElement>(null);
 
   const [frameStyle, setFrameStyle] = useState<FrameOption>("none");
   const [logo, setLogo] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [tokenCopied, setTokenCopied] = useState(false);
-  const [showToken, setShowToken] = useState(false);
-  const [tokenConfirmed, setTokenConfirmed] = useState(false);
-  const [animateQR, setAnimateQR] = useState(false);
+  const [fgColor, setFgColor] = useState("#000");
+  const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
+  const [exportResolution, setExportResolution] = useState<number>(1200);
+  const [exportQuality, setExportQuality] = useState(90);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [isExporting, _setIsExporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [fgColor, setFgColor] = useState("#000000");
 
   const qrValue = state?.shortUrl || "https://zaplink.example.com/demo123";
 
@@ -72,8 +78,6 @@ export default function CustomizePage() {
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target?.result) setLogo(event.target.result as string);
-      setAnimateQR(true);
-      setTimeout(() => setAnimateQR(false), 400);
     };
     reader.readAsDataURL(file);
   };
@@ -134,12 +138,6 @@ export default function CustomizePage() {
     });
     const svgUrl = URL.createObjectURL(svgBlob);
     const img = new Image();
-
-    // Cleanup function to ensure URL is always revoked
-    const cleanup = () => {
-      URL.revokeObjectURL(svgUrl);
-    };
-
     img.onload = () => {
       try {
         const canvas = document.createElement("canvas");
@@ -147,7 +145,7 @@ export default function CustomizePage() {
         canvas.height = 300;
         const ctx = canvas.getContext("2d");
         if (!ctx) {
-          cleanup();
+          URL.revokeObjectURL(svgUrl);
           toast.error(
             "Failed to create canvas context. Please try again."
           );
@@ -162,18 +160,12 @@ export default function CustomizePage() {
         downloadLink.href = pngFile;
         downloadLink.click();
         toast.success("Your QR code has been downloaded successfully.");
-      } catch (error) {
+      } catch {
         toast.error("Failed to generate QR image. Please try again.");
       } finally {
-        cleanup();
+        URL.revokeObjectURL(svgUrl);
       }
     };
-
-    img.onerror = () => {
-      cleanup();
-      toast.error("Failed to load QR image. Please try again.");
-    };
-
     img.src = svgUrl;
   };
 
@@ -202,23 +194,8 @@ export default function CustomizePage() {
     }
   };
 
-  const handleCopyToken = async () => {
-    if (!state?.deletionToken) return;
-    try {
-      await navigator.clipboard.writeText(state.deletionToken);
-      setTokenCopied(true);
-      toast.success("Deletion token copied to clipboard");
-      setTimeout(() => setTokenCopied(false), 2000);
-    } catch {
-      toast.error("Failed to copy token");
-    }
-  };
-
-  const handleDeleteSuccess = () => {
-    toast.success("Redirecting to home...");
-    setTimeout(() => {
-      navigate("/");
-    }, 1000);
+  const handleBatchDownload = () => {
+    toast.info("Batch download feature coming soon!");
   };
 
   return (
@@ -227,11 +204,11 @@ export default function CustomizePage() {
         <div className="bg-card rounded-3xl shadow-lg p-6 sm:p-8 space-y-8 border border-border">
           {/* Step Indicator */}
           <div className="flex items-center justify-between mb-8">
-            <span className="text-xs sm:text-sm text-primary font-semibold bg-primary/10 px-3 py-1 rounded-full animate-pulse">
+            <span className="text-xs sm:text-sm text-primary font-semibold bg-primary/10 px-3 py-1 rounded-full">
               Step 3 of 3
             </span>
             <div className="flex-1 mx-4 h-2 bg-muted rounded-full overflow-hidden">
-              <div className="progress-bar h-full w-full bg-gradient-to-r from-primary via-primary/80 to-primary shadow-md transition-all duration-700"></div>
+              <div className="progress-bar h-full w-full"></div>
             </div>
             <span className="text-xs sm:text-sm text-primary font-semibold flex items-center gap-1">
               <Sparkles className="h-3 w-3" />
@@ -239,16 +216,13 @@ export default function CustomizePage() {
             </span>
           </div>
 
-          {/* Two-column layout: Preview on left, Controls on right */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
-            {/* QR Preview Card */}
-            <div className="flex flex-col items-center justify-center order-2 lg:order-1">
-              <div className="bg-gradient-to-br from-muted/30 to-muted/10 p-8 sm:p-12 rounded-3xl border border-border/50 shadow-xl backdrop-blur-sm">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
+            {/* QR Code Preview */}
+            <div className="flex flex-col items-center justify-center">
+              <div className="bg-muted/20 p-10 rounded-3xl border border-border">
                 <div
                   ref={qrRef}
-                  className={`flex items-center justify-center transition-all duration-500 hover:scale-105 ${
-                    animateQR ? "scale-110 opacity-80" : "scale-100 opacity-100"
-                  }`}
+                  className="flex items-center justify-center transition-all duration-500 hover:scale-105"
                   style={getFrameStyle()}
                 >
                   <QRCodeSVG
@@ -271,16 +245,56 @@ export default function CustomizePage() {
               </p>
             </div>
 
-            {/* Customization Controls */}
-            <div className="space-y-8 order-1 lg:order-2">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <Palette className="h-5 w-5 text-primary" />
-                </div>
-                <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
-                  Design Options
-                </h2>
+            {/* Scan Preview Panel */}
+            <div className="lg:col-span-1">
+              <QRScanPreview
+                name={state?.name || "Untitled Zap"}
+                type={state?.type || "UNIVERSAL"}
+                destinationUrl={state?.originalUrl || state?.shortUrl}
+                hasPassword={state?.hasPassword || false}
+                viewLimit={state?.viewLimit}
+                expiresAt={state?.expiresAt}
+                quizQuestion={state?.quizQuestion}
+                unlockAt={state?.unlockAt}
+              />
+            </div>
+
+            {/* Controls */}
+            <div className="lg:col-span-1 space-y-6">
+              {/* QR Color Picker */}
+              <div className="space-y-4">
+                <Label
+                  htmlFor="qr-color"
+                  className="text-base font-semibold text-foreground flex items-center gap-2"
+                >
+                  <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                  QR Color
+                </Label>
+                <input
+                  id="qr-color"
+                  type="color"
+                  value={fgColor}
+                  onChange={(e) => setFgColor(e.target.value)}
+                  className="w-full h-12 rounded-xl border border-border cursor-pointer"
+                />
               </div>
+
+              {/* Export Settings */}
+              <FormatSelector
+                value={exportFormat}
+                onChange={setExportFormat}
+              />
+              <ResolutionSelector
+                value={exportResolution}
+                onChange={setExportResolution}
+                disabled={exportFormat === "svg" || exportFormat === "pdf"}
+              />
+              <ExportPreview
+                format={exportFormat}
+                resolution={exportResolution}
+                quality={exportQuality}
+                onQualityChange={setExportQuality}
+              />
 
               {/* Frame Style Selector */}
               <div className="space-y-4">
@@ -293,11 +307,9 @@ export default function CustomizePage() {
                 </Label>
                 <Select
                   value={frameStyle}
-                  onValueChange={(value: string) => {
-                    setFrameStyle(value as FrameOption);
-                    setAnimateQR(true);
-                    setTimeout(() => setAnimateQR(false), 400);
-                  }}
+                  onValueChange={(value: string) =>
+                    setFrameStyle(value as FrameOption)
+                  }
                 >
                   <SelectTrigger
                     id="frame-style"
@@ -328,27 +340,6 @@ export default function CustomizePage() {
                 </Select>
               </div>
 
-              {/* Foreground Color Picker */}
-              <div className="space-y-4">
-                <Label htmlFor="fg-color" className="text-base font-semibold text-foreground flex items-center gap-2">
-                  <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-                  QR Foreground Color
-                </Label>
-
-                <input
-                  id="fg-color"
-                  type="color"
-                  value={fgColor}
-                  onChange={(e) => {
-                    setFgColor(e.target.value);
-                    setAnimateQR(true);
-                    setTimeout(() => setAnimateQR(false), 400);
-                  }}
-                  className="w-20 h-12 cursor-pointer rounded-md border border-border bg-background"
-                  title="Choose QR code foreground color"
-                />
-              </div>
-
               {/* Logo Upload */}
               <div className="space-y-4">
                 <Label
@@ -369,8 +360,6 @@ export default function CustomizePage() {
                     className="hidden"
                     id="logo-upload"
                     accept="image/*"
-                    title="Upload logo image"
-                    aria-label="Upload logo image for QR code"
                   />
                   {logo ? (
                     <div className="flex items-center justify-center space-x-3">
@@ -389,13 +378,11 @@ export default function CustomizePage() {
                         onClick={(e) => {
                           e.stopPropagation();
                           setLogo(null);
-                          toast.info("Logo removed"); // Feedback for logo removal
                         }}
                         className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg focus-ring"
                       >
                         <X className="h-4 w-4" />
-                      </Button>{" "}
-                      {/* Ensure this closing tag is present */}
+                      </Button>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center space-y-3">
@@ -421,20 +408,10 @@ export default function CustomizePage() {
                   <div className="p-2 bg-green-500/10 rounded-lg">
                     <Sparkles className="h-5 w-5 text-green-500" />
                   </div>
-                  <h2 className="text-xl font-bold text-foreground">Actions</h2>
+                  <h2 className="text-xl font-bold text-foreground">
+                    Actions
+                  </h2>
                 </div>
-
-                {/* Inline Short URL display with Copy button */}
-                <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-muted/30">
-                  <span
-                    className="flex-1 truncate text-sm text-muted-foreground font-mono select-all"
-                    title={qrValue}
-                  >
-                    {qrValue}
-                  </span>
-                  <CopyButton text={qrValue} />
-                </div>
-
                 <div className="grid grid-cols-1 gap-4">
                   <Button
                     onClick={handleDownload}
@@ -442,6 +419,15 @@ export default function CustomizePage() {
                   >
                     <Download className="h-5 w-5 mr-2" />
                     Download QR Code
+                  </Button>
+                  <Button
+                    onClick={handleBatchDownload}
+                    disabled={isExporting}
+                    variant="outline"
+                    className="h-12 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary font-semibold rounded-xl transition-all duration-300 hover:scale-[1.02] bg-background focus-ring"
+                  >
+                    <PackageOpen className="h-5 w-5 mr-2" />
+                    Download All Formats
                   </Button>
                   <div className="grid grid-cols-2 gap-4">
                     <Button
@@ -473,98 +459,6 @@ export default function CustomizePage() {
                     </Button>
                   </div>
                 </div>
-
-                {/* Deletion Token Section */}
-                {state?.deletionToken && (
-                  <div className="space-y-4 pt-4 border-t border-border/50">
-                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 space-y-3">
-                      <div className="flex items-start gap-3">
-                        <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1 space-y-2">
-                          <h3 className="text-sm font-bold text-amber-600 dark:text-amber-500">
-                            Save Your Deletion Token
-                          </h3>
-                          <p className="text-xs text-muted-foreground">
-                            This token is required to delete your Zap later. Save it
-                            securely - you won't be able to retrieve it again!
-                          </p>
-
-                          {/* Token Display */}
-                          <div className="flex items-center gap-2 p-3 bg-background/50 rounded-lg border border-border">
-                            <Shield className="h-4 w-4 text-primary flex-shrink-0" />
-                            <code className="flex-1 text-xs font-mono break-all select-all">
-                              {showToken
-                                ? state.deletionToken
-                                : "•".repeat(Math.min(state.deletionToken.length, 40))}
-                            </code>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setShowToken(!showToken)}
-                              className="h-8 w-8 flex-shrink-0"
-                              title={showToken ? "Hide token" : "Show token"}
-                            >
-                              {showToken ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-
-                          {/* Token Actions */}
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={handleCopyToken}
-                              className="h-9 rounded-lg text-xs"
-                            >
-                              {tokenCopied ? (
-                                <>
-                                  <Check className="h-3 w-3 mr-1.5" />
-                                  Copied!
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="h-3 w-3 mr-1.5" />
-                                  Copy Token
-                                </>
-                              )}
-                            </Button>
-                            {!tokenConfirmed && (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setTokenConfirmed(true);
-                                  toast.success("Token confirmed! Keep it safe.");
-                                }}
-                                className="h-9 rounded-lg text-xs"
-                              >
-                                <Check className="h-3 w-3 mr-1.5" />
-                                I've Saved It
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Delete Button */}
-                    <Button
-                      onClick={() => setDeleteModalOpen(true)}
-                      variant="destructive"
-                      className="w-full h-12 rounded-xl font-semibold transition-all duration-300 hover:scale-[1.02]"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete This Zap
-                    </Button>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -581,16 +475,6 @@ export default function CustomizePage() {
             </Link>
           </div>
         </div>
-
-        {/* Delete Confirmation Modal */}
-        {state?.zapId && (
-          <DeleteZapModal
-            open={deleteModalOpen}
-            onOpenChange={setDeleteModalOpen}
-            zapId={state.zapId}
-            onDeleteSuccess={handleDeleteSuccess}
-          />
-        )}
       </main>
     </div>
   );

@@ -97,7 +97,7 @@ export default function DeleteZapModal({
             });
             break;
 
-          case 429:
+          case 429: {
             // Rate limit exceeded
             const retryAfter = data?.retryAfter || 900;
             const retryMinutes = Math.ceil(retryAfter / 60);
@@ -108,6 +108,7 @@ export default function DeleteZapModal({
               description: `Please wait ${retryMinutes} minute${retryMinutes > 1 ? "s" : ""} before trying again.`,
             });
             break;
+          }
 
           case 500:
             // Server error

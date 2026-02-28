@@ -55,7 +55,7 @@ export default function UrlShortenerPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
       toast.success("Copied to clipboard");
-    } catch (error) {
+    } catch {
       toast.error("Failed to copy link");
     }
   };

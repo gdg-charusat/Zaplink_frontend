@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import axios, { AxiosError } from "axios";
 import {
   Loader2,
   Shield,
@@ -9,14 +10,12 @@ import {
   FileText,
   Link,
   Type as TypeIcon,
-  X,
 } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
-import { uploadZap, type ApiError } from "../services/api";
 import { Switch } from "./ui/switch";
 import FileUpload from "./FileUpload";
 
@@ -107,65 +106,42 @@ export default function UploadPage() {
   const initialType = (location.state?.type as FileType) || "pdf";
   const navigate = useNavigate();
   const [qrName, setQrName] = useState(
-    () => sessionStorage.getItem("qrName") || "",
+    () => sessionStorage.getItem("qrName") || ""
   );
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [passwordProtect, setPasswordProtect] = useState(false);
   const [password, setPassword] = useState("");
   const [selfDestruct, setSelfDestruct] = useState(false);
-  const [destructViews, setDestructViews] = useState(() => {
-    try {
-      return JSON.parse(sessionStorage.getItem("destructViews") || "false");
-    } catch (error) {
-      console.warn("Failed to parse destructViews from sessionStorage:", error);
-      return false;
-    }
-  });
-  const [destructTime, setDestructTime] = useState(() => {
-    try {
-      return JSON.parse(sessionStorage.getItem("destructTime") || "false");
-    } catch (error) {
-      console.warn("Failed to parse destructTime from sessionStorage:", error);
-      return false;
-    }
-  });
+  const [destructViews, setDestructViews] = useState(() =>
+    JSON.parse(sessionStorage.getItem("destructViews") || "false")
+  );
+  const [destructTime, setDestructTime] = useState(() =>
+    JSON.parse(sessionStorage.getItem("destructTime") || "false")
+  );
   const [viewsValue, setViewsValue] = useState(
-    () => sessionStorage.getItem("viewsValue") || "",
+    () => sessionStorage.getItem("viewsValue") || ""
   );
   const [timeValue, setTimeValue] = useState(
-    () => sessionStorage.getItem("timeValue") || "",
+    () => sessionStorage.getItem("timeValue") || ""
   );
   const [loading, setLoading] = useState(false);
   const [type, setType] = useState<FileType>(initialType);
   const [urlValue, setUrlValue] = useState("");
   const [textValue, setTextValue] = useState("");
   const [compressPdf, setCompressPdf] = useState(false);
+  const [enableDelayedAccess] = useState(false);
+  const [delayedAccessValue] = useState("");
+  const [delayedAccessType] = useState<"minutes" | "hours" | "days">("hours");
+  const [enableAccessQuiz] = useState(false);
+  const [quizQuestion] = useState("");
   const [lastQR, setLastQR] = useState(() => {
-    try {
-      const data = sessionStorage.getItem("lastQR");
-      return data ? JSON.parse(data) : null;
-    } catch (error) {
-      console.warn("Failed to parse lastQR from sessionStorage:", error);
-      sessionStorage.removeItem("lastQR");
-      return null;
-    }
+    const data = sessionStorage.getItem("lastQR");
+    return data ? JSON.parse(data) : null;
   });
   const [lastQRFormHash, setLastQRFormHash] = useState(() => {
     const data = sessionStorage.getItem("lastQRFormHash");
     return data || null;
   });
-
-  // Access Quiz States
-  const [enableAccessQuiz, setEnableAccessQuiz] = useState(false);
-  const [quizQuestion, setQuizQuestion] = useState("");
-  const [quizAnswer, setQuizAnswer] = useState("");
-
-  // Delayed File Access States
-  const [enableDelayedAccess, setEnableDelayedAccess] = useState(false);
-  const [delayedAccessType, setDelayedAccessType] = useState<
-    "minutes" | "hours" | "days"
-  >("hours");
-  const [delayedAccessValue, setDelayedAccessValue] = useState("");
 
   // Persist state to sessionStorage
   useEffect(() => {
@@ -205,45 +181,9 @@ export default function UploadPage() {
   }, [timeValue]);
 
   useEffect(() => {
-    sessionStorage.setItem(
-      "enableAccessQuiz",
-      JSON.stringify(enableAccessQuiz),
-    );
-    if (!enableAccessQuiz) {
-      setQuizQuestion("");
-      setQuizAnswer("");
-    }
-  }, [enableAccessQuiz]);
-
-  useEffect(() => {
-    sessionStorage.setItem("quizQuestion", quizQuestion);
-  }, [quizQuestion]);
-
-  useEffect(() => {
-    sessionStorage.setItem("quizAnswer", quizAnswer);
-  }, [quizAnswer]);
-
-  useEffect(() => {
-    sessionStorage.setItem(
-      "enableDelayedAccess",
-      JSON.stringify(enableDelayedAccess),
-    );
-    if (!enableDelayedAccess) {
-      setDelayedAccessValue("");
-    }
-  }, [enableDelayedAccess]);
-
-  useEffect(() => {
-    sessionStorage.setItem("delayedAccessType", delayedAccessType);
-  }, [delayedAccessType]);
-
-  useEffect(() => {
-    sessionStorage.setItem("delayedAccessValue", delayedAccessValue);
-  }, [delayedAccessValue]);
-
-  useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
+
 
   // Reset form state when file type changes
   useEffect(() => {
@@ -263,6 +203,20 @@ export default function UploadPage() {
 
   // After successful QR generation, store QR and form hash
   const handleGenerateAndContinue = async () => {
+    // Validate self-destruct views
+    if (selfDestruct && destructViews) {
+      if (!viewsValue.trim() || isNaN(Number(viewsValue)) || Number(viewsValue) < 1) {
+        toast.error("Invalid value for 'After Views'. Please enter a positive integer.");
+        return;
+      }
+    }
+    // Validate self-destruct time
+    if (selfDestruct && destructTime) {
+      if (!timeValue.trim() || isNaN(Number(timeValue)) || Number(timeValue) < 1) {
+        toast.error("Invalid value for 'After Time'. Please enter a positive integer.");
+        return;
+      }
+    }
     if (type === "url") {
       if (!urlValue || !/^https?:\/\//.test(urlValue)) {
         toast.error("Please enter a valid http:// or https:// link");
@@ -287,36 +241,19 @@ export default function UploadPage() {
         const hours = parseInt(timeValue);
         if (!isNaN(hours)) {
           expirationTime.setTime(
-            expirationTime.getTime() + hours * 60 * 60 * 1000,
+            expirationTime.getTime() + hours * 60 * 60 * 1000
           );
           formData.append("expiresAt", expirationTime.toISOString());
         }
       }
-      // ── Add Access Quiz ───────────────────────────────────────────────────
-      if (enableAccessQuiz && quizQuestion.trim() && quizAnswer.trim()) {
-        formData.append("quizQuestion", quizQuestion);
-        formData.append("quizAnswer", quizAnswer);
-      }
-      // ── Add Delayed File Access ──────────────────────────────────────────
-      if (
-        enableDelayedAccess &&
-        delayedAccessValue.trim() &&
-        !isNaN(Number(delayedAccessValue))
-      ) {
-        let delaySeconds = parseInt(delayedAccessValue);
-        if (delayedAccessType === "hours") {
-          delaySeconds *= 60 * 60;
-        } else if (delayedAccessType === "days") {
-          delaySeconds *= 24 * 60 * 60;
-        } else if (delayedAccessType === "minutes") {
-          delaySeconds *= 60;
-        }
-        formData.append("delayedAccessTime", String(delaySeconds));
-      }
 
       try {
         setLoading(true);
-        const data = await uploadZap(formData);
+        const response = await axios.post(
+          `${import.meta.env.VITE_BACKEND_URL}/api/zaps/upload`,
+          formData
+        );
+        const { data } = response.data;
 
         const formHash = getFormDataHash({
           qrName,
@@ -336,7 +273,39 @@ export default function UploadPage() {
         setLastQR({ ...data });
         setLastQRFormHash(formHash);
 
-        toast.success("QR Code generated successfully!"); // added toast
+        toast.success("QR Code generated successfully!");
+        // Calculate expiration timestamp
+        let expiresAt: string | undefined;
+        if (selfDestruct && destructTime && timeValue.trim()) {
+          const expirationTime = new Date();
+          const hours = parseInt(timeValue);
+          if (!isNaN(hours)) {
+            expirationTime.setTime(
+              expirationTime.getTime() + hours * 60 * 60 * 1000,
+            );
+            expiresAt = expirationTime.toISOString();
+          }
+        }
+
+        // Calculate unlock timestamp
+        let unlockAt: string | undefined;
+        if (
+          enableDelayedAccess &&
+          delayedAccessValue.trim() &&
+          !isNaN(Number(delayedAccessValue))
+        ) {
+          const unlockTime = new Date();
+          let delaySeconds = parseInt(delayedAccessValue);
+          if (delayedAccessType === "hours") {
+            delaySeconds *= 60 * 60;
+          } else if (delayedAccessType === "days") {
+            delaySeconds *= 24 * 60 * 60;
+          } else if (delayedAccessType === "minutes") {
+            delaySeconds *= 60;
+          }
+          unlockTime.setTime(unlockTime.getTime() + delaySeconds * 1000);
+          unlockAt = unlockTime.toISOString();
+        }
 
         navigate("/customize", {
           state: {
@@ -346,13 +315,22 @@ export default function UploadPage() {
             type: data.type.toUpperCase(),
             name: data.name,
             deletionToken: data.deletionToken,
+            hasPassword: passwordProtect && password.trim().length > 0,
+            viewLimit: selfDestruct && destructViews && viewsValue.trim() ? parseInt(viewsValue) : undefined,
+            expiresAt,
+            quizQuestion: enableAccessQuiz && quizQuestion.trim() ? quizQuestion : undefined,
+            unlockAt,
+            originalUrl: urlValue || null,
           },
         });
       } catch (error: unknown) {
-        const err = error as ApiError;
-        toast.error(
-          `Upload failed: ${err.message}`
-        );
+        let errorMessage = "Unknown error occurred";
+        if (axios.isAxiosError(error)) {
+          errorMessage = error.response?.data?.message || error.message;
+        } else if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+        toast.error(`Upload failed: ${errorMessage}`);
       } finally {
         setLoading(false);
       }
@@ -383,36 +361,19 @@ export default function UploadPage() {
         const hours = parseInt(timeValue);
         if (!isNaN(hours)) {
           expirationTime.setTime(
-            expirationTime.getTime() + hours * 60 * 60 * 1000,
+            expirationTime.getTime() + hours * 60 * 60 * 1000
           );
           formData.append("expiresAt", expirationTime.toISOString());
         }
       }
-      // ── Add Access Quiz ───────────────────────────────────────────────────
-      if (enableAccessQuiz && quizQuestion.trim() && quizAnswer.trim()) {
-        formData.append("quizQuestion", quizQuestion);
-        formData.append("quizAnswer", quizAnswer);
-      }
-      // ── Add Delayed File Access ──────────────────────────────────────────
-      if (
-        enableDelayedAccess &&
-        delayedAccessValue.trim() &&
-        !isNaN(Number(delayedAccessValue))
-      ) {
-        let delaySeconds = parseInt(delayedAccessValue);
-        if (delayedAccessType === "hours") {
-          delaySeconds *= 60 * 60;
-        } else if (delayedAccessType === "days") {
-          delaySeconds *= 24 * 60 * 60;
-        } else if (delayedAccessType === "minutes") {
-          delaySeconds *= 60;
-        }
-        formData.append("delayedAccessTime", String(delaySeconds));
-      }
 
       try {
         setLoading(true);
-        const data = await uploadZap(formData);
+        const response = await axios.post(
+          `${import.meta.env.VITE_BACKEND_URL}/api/zaps/upload`,
+          formData
+        );
+        const { data } = response.data;
 
         const formHash = getFormDataHash({
           qrName,
@@ -432,7 +393,39 @@ export default function UploadPage() {
         setLastQR({ ...data });
         setLastQRFormHash(formHash);
 
-        toast.success("QR Code generated successfully!"); // added toast
+        toast.success("QR Code generated successfully!");
+        // Calculate expiration timestamp
+        let expiresAt2: string | undefined;
+        if (selfDestruct && destructTime && timeValue.trim()) {
+          const expirationTime = new Date();
+          const hours = parseInt(timeValue);
+          if (!isNaN(hours)) {
+            expirationTime.setTime(
+              expirationTime.getTime() + hours * 60 * 60 * 1000,
+            );
+            expiresAt2 = expirationTime.toISOString();
+          }
+        }
+
+        // Calculate unlock timestamp
+        let unlockAt2: string | undefined;
+        if (
+          enableDelayedAccess &&
+          delayedAccessValue.trim() &&
+          !isNaN(Number(delayedAccessValue))
+        ) {
+          const unlockTime = new Date();
+          let delaySeconds = parseInt(delayedAccessValue);
+          if (delayedAccessType === "hours") {
+            delaySeconds *= 60 * 60;
+          } else if (delayedAccessType === "days") {
+            delaySeconds *= 24 * 60 * 60;
+          } else if (delayedAccessType === "minutes") {
+            delaySeconds *= 60;
+          }
+          unlockTime.setTime(unlockTime.getTime() + delaySeconds * 1000);
+          unlockAt2 = unlockTime.toISOString();
+        }
 
         navigate("/customize", {
           state: {
@@ -442,12 +435,18 @@ export default function UploadPage() {
             type: data.type.toUpperCase(),
             name: data.name,
             deletionToken: data.deletionToken,
+            hasPassword: passwordProtect && password.trim().length > 0,
+            viewLimit: selfDestruct && destructViews && viewsValue.trim() ? parseInt(viewsValue) : undefined,
+            expiresAt: expiresAt2,
+            quizQuestion: enableAccessQuiz && quizQuestion.trim() ? quizQuestion : undefined,
+            unlockAt: unlockAt2,
+            originalUrl: null,
           },
         });
       } catch (error: unknown) {
-        const err = error as ApiError;
+        const err = error as AxiosError<{ message: string }>;
         toast.error(
-          `Upload failed: ${err.message}`
+          `Upload failed: ${err.response?.data?.message || err.message}`
         );
       } finally {
         setLoading(false);
@@ -475,36 +474,20 @@ export default function UploadPage() {
       const hours = parseInt(timeValue);
       if (!isNaN(hours)) {
         expirationTime.setTime(
-          expirationTime.getTime() + hours * 60 * 60 * 1000,
+          expirationTime.getTime() + hours * 60 * 60 * 1000
         );
         formData.append("expiresAt", expirationTime.toISOString());
       }
     }
-    // ── Add Access Quiz ───────────────────────────────────────────────────
-    if (enableAccessQuiz && quizQuestion.trim() && quizAnswer.trim()) {
-      formData.append("quizQuestion", quizQuestion);
-      formData.append("quizAnswer", quizAnswer);
-    }
-    // ── Add Delayed File Access ──────────────────────────────────────────
-    if (
-      enableDelayedAccess &&
-      delayedAccessValue.trim() &&
-      !isNaN(Number(delayedAccessValue))
-    ) {
-      let delaySeconds = parseInt(delayedAccessValue);
-      if (delayedAccessType === "hours") {
-        delaySeconds *= 60 * 60;
-      } else if (delayedAccessType === "days") {
-        delaySeconds *= 24 * 60 * 60;
-      } else if (delayedAccessType === "minutes") {
-        delaySeconds *= 60;
-      }
-      formData.append("delayedAccessTime", String(delaySeconds));
-    }
+
 
     try {
       setLoading(true);
-      const data = await uploadZap(formData);
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/zaps/upload`,
+        formData
+      );
+      const { data } = response.data;
 
       const formHash = getFormDataHash({
         qrName,
@@ -524,7 +507,39 @@ export default function UploadPage() {
       setLastQR({ ...data });
       setLastQRFormHash(formHash);
 
-      toast.success("QR Code generated successfully!"); // added toast
+      toast.success("QR Code generated successfully!");
+      // Calculate expiration timestamp
+      let expiresAt3: string | undefined;
+      if (selfDestruct && destructTime && timeValue.trim()) {
+        const expirationTime = new Date();
+        const hours = parseInt(timeValue);
+        if (!isNaN(hours)) {
+          expirationTime.setTime(
+            expirationTime.getTime() + hours * 60 * 60 * 1000,
+          );
+          expiresAt3 = expirationTime.toISOString();
+        }
+      }
+
+      // Calculate unlock timestamp
+      let unlockAt3: string | undefined;
+      if (
+        enableDelayedAccess &&
+        delayedAccessValue.trim() &&
+        !isNaN(Number(delayedAccessValue))
+      ) {
+        const unlockTime = new Date();
+        let delaySeconds = parseInt(delayedAccessValue);
+        if (delayedAccessType === "hours") {
+          delaySeconds *= 60 * 60;
+        } else if (delayedAccessType === "days") {
+          delaySeconds *= 24 * 60 * 60;
+        } else if (delayedAccessType === "minutes") {
+          delaySeconds *= 60;
+        }
+        unlockTime.setTime(unlockTime.getTime() + delaySeconds * 1000);
+        unlockAt3 = unlockTime.toISOString();
+      }
 
       navigate("/customize", {
         state: {
@@ -534,12 +549,22 @@ export default function UploadPage() {
           type: data.type.toUpperCase(),
           name: data.name,
           deletionToken: data.deletionToken,
+          hasPassword: passwordProtect && password.trim().length > 0,
+          viewLimit: selfDestruct && destructViews && viewsValue.trim() ? parseInt(viewsValue) : undefined,
+          expiresAt: expiresAt3,
+          quizQuestion: enableAccessQuiz && quizQuestion.trim() ? quizQuestion : undefined,
+          unlockAt: unlockAt3,
+          originalUrl: null,
         },
       });
     } catch (error: unknown) {
-      const err = error as ApiError;
+      if (axios.isCancel(error)) {
+        toast.info("Upload canceled by user");
+        return;
+      }
+      const err = error as AxiosError<{ message: string }>;
       toast.error(
-        `Upload failed: ${err.message}`
+        `Upload failed: ${err.response?.data?.message || err.message}`
       );
     } finally {
       setLoading(false);
@@ -606,8 +631,8 @@ export default function UploadPage() {
 
   // Add file size constraints
   const MAX_SIZE_MB = type === "video" ? 100 : 10;
-  const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
+  // Handle files from the FileUpload component
   const handleFilesFromUploader = (files: File[]) => {
     if (files.length === 0) return;
     const file = files[0];
@@ -637,15 +662,13 @@ export default function UploadPage() {
     setQrName(value);
   };
 
-  // Step calculation logic
-  const hasContent =
-    (type === "url" && urlValue.trim()) ||
-    (type === "text" && textValue.trim()) ||
-    (type !== "url" && type !== "text" && uploadedFile);
-
-  const hasValidName = qrName.trim().length > 0;
-
-  const hasValidSecurity =
+  const canGenerate =
+    qrName.trim() &&
+    (type === "url"
+      ? urlValue.trim()
+      : type === "text"
+        ? textValue.trim()
+        : uploadedFile) &&
     (!passwordProtect || password.trim()) &&
     (!selfDestruct ||
       (destructViews && viewsValue.trim()) ||
@@ -834,47 +857,31 @@ export default function UploadPage() {
                 Generate
               </span>
             </div>
+            <span className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2">
+              Customize
+              <Zap className="h-3 w-3 sm:h-4 sm:w-4" />
+            </span>
           </div>
 
-          {/* QR Code Name with Animation */}
-          <div
-            className="space-y-4 transition-all duration-500 transform"
-            style={{
-              opacity: currentStep >= 2 ? 1 : 0.6,
-              transform: currentStep >= 2 ? "scale(1)" : "scale(0.98)",
-            }}
-          >
+          {/* QR Code Name */}
+          <div className="space-y-4">
             <Label className="text-lg font-semibold text-foreground flex items-center gap-3">
               <div
                 className={`w-3 h-3 rounded-full transition-all duration-500 ${completedSteps.includes(2) ? "bg-primary shadow-lg" : "bg-primary/50"
                   }`}
               ></div>
               Name your QR Code
-              {completedSteps.includes(2) && (
-                <span className="text-xs text-primary animate-fade-in">✓</span>
-              )}
             </Label>
-            <div className="relative">
-              <Input
-                id="qr-name"
-                placeholder="Enter a memorable name..."
-                value={qrName}
-                onChange={handleQrNameChange}
-                className="input-focus text-base rounded-xl border-border bg-background h-14 px-6 pr-12 font-medium text-lg focus-ring"
-              />
-              {qrName && (
-                <button
-                  onClick={() => setQrName("")}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground focus-ring"
-                  aria-label="Clear name"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              )}
-            </div>
+            <Input
+              id="qr-name"
+              placeholder="Enter a memorable name..."
+              value={qrName}
+              onChange={handleQrNameChange}
+              className="input-focus rounded-xl border-border bg-background h-14 px-6 font-medium text-lg focus-ring"
+            />
           </div>
 
-          {/* Content Input with Animation */}
+          {/* Content Input */}
           {type === "url" ? (
             <div
               className="space-y-4 transition-all duration-500 transform"
@@ -891,25 +898,14 @@ export default function UploadPage() {
                 <Link className="h-5 w-5 text-blue-500" />
                 Enter URL
               </Label>
-              <div className="relative">
-                <Input
-                  id="url"
-                  type="url"
-                  value={urlValue}
-                  onChange={(e) => setUrlValue(e.target.value)}
-                  placeholder="https://example.com"
-                  className="input-focus text-base rounded-xl border-border bg-background h-14 px-6 pr-12 text-lg focus-ring"
-                />
-                {urlValue && (
-                  <button
-                    onClick={() => setUrlValue("")}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground focus-ring"
-                    aria-label="Clear URL"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                )}
-              </div>
+              <Input
+                id="url"
+                type="url"
+                value={urlValue}
+                onChange={(e) => setUrlValue(e.target.value)}
+                placeholder="https://example.com"
+                className="input-focus rounded-xl border-border bg-background h-14 px-6 text-lg focus-ring"
+              />
               <p className="text-sm text-muted-foreground pl-6">
                 {TYPE_MESSAGES[type]}
               </p>
@@ -930,26 +926,15 @@ export default function UploadPage() {
                 <TypeIcon className="h-5 w-5 text-yellow-500" />
                 Enter Text
               </Label>
-              <div className="relative">
-                <textarea
-                  id="text"
-                  value={textValue}
-                  onChange={(e) => setTextValue(e.target.value)}
-                  placeholder="Enter your text content here..."
-                  className="w-full min-h-[140px] p-6 pr-12 text-base rounded-xl border border-border bg-background text-foreground resize-vertical transition-all duration-200 focus:border-primary/50 focus:ring-2 focus:ring-primary/10 focus-ring"
-                  rows={6}
-                  maxLength={10000}
-                />
-                {textValue && (
-                  <button
-                    onClick={() => setTextValue("")}
-                    className="absolute right-4 top-6 p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground focus-ring"
-                    aria-label="Clear text"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                )}
-              </div>
+              <textarea
+                id="text"
+                value={textValue}
+                onChange={(e) => setTextValue(e.target.value)}
+                placeholder="Enter your text content here..."
+                className="w-full min-h-[140px] p-6 text-base rounded-xl border border-border bg-background text-foreground resize-vertical transition-all duration-200 focus:border-primary/50 focus:ring-2 focus:ring-primary/10 focus-ring"
+                rows={6}
+                maxLength={10000}
+              />
               <div className="flex justify-between items-center px-2">
                 <p className="text-sm text-muted-foreground">
                   {TYPE_MESSAGES[type]}
@@ -968,7 +953,9 @@ export default function UploadPage() {
               }}
             >
               <div className="space-y-4">
-                <Label className="text-lg font-semibold text-foreground flex items-center gap-3">
+                <Label
+                  className="text-lg font-semibold text-foreground flex items-center gap-3"
+                >
                   <div className="w-3 h-3 bg-purple-500 rounded-full"></div>
                   <FileText className="h-5 w-5 text-purple-500" />
                   Upload File
@@ -998,10 +985,7 @@ export default function UploadPage() {
                     checked={compressPdf}
                     onCheckedChange={setCompressPdf}
                   />
-                  <label
-                    htmlFor="compress-pdf"
-                    className="text-sm text-muted-foreground"
-                  >
+                  <label htmlFor="compress-pdf" className="text-sm text-muted-foreground">
                     Compress PDF before upload
                   </label>
                 </div>
@@ -1134,151 +1118,7 @@ export default function UploadPage() {
             </div>
           </div>
 
-          {/* Access Quiz */}
-          <div className="space-y-8 border-t border-border pt-8">
-            <h3 className="text-2xl font-bold text-foreground flex items-center gap-3">
-              <Shield className="h-6 w-6 text-blue-500" />
-              Access Quiz (Optional)
-            </h3>
-
-            <div className="space-y-6">
-              <div className="flex items-center space-x-4 p-6 rounded-xl bg-muted/30 border border-border hover:border-blue-500/30 transition-all duration-200">
-                <Checkbox
-                  id="enable-quiz"
-                  checked={enableAccessQuiz}
-                  onCheckedChange={(checked) =>
-                    setEnableAccessQuiz(checked === true)
-                  }
-                  className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 w-5 h-5"
-                />
-                <Label
-                  htmlFor="enable-quiz"
-                  className="text-base font-medium text-foreground cursor-pointer flex items-center gap-3"
-                >
-                  <Shield className="h-5 w-5 text-blue-500" />
-                  Protect with Quiz
-                </Label>
-              </div>
-
-              {enableAccessQuiz && (
-                <div className="pl-10 space-y-4">
-                  <div>
-                    <Label
-                      htmlFor="quiz-question"
-                      className="text-base font-medium text-foreground block mb-2"
-                    >
-                      Quiz Question
-                    </Label>
-                    <Input
-                      id="quiz-question"
-                      placeholder="e.g., What is the capital of France?"
-                      value={quizQuestion}
-                      onChange={(e) => setQuizQuestion(e.target.value)}
-                      className="input-focus rounded-xl border-border bg-background h-12 focus-ring"
-                    />
-                  </div>
-                  <div>
-                    <Label
-                      htmlFor="quiz-answer"
-                      className="text-base font-medium text-foreground block mb-2"
-                    >
-                      Answer (Case-Insensitive)
-                    </Label>
-                    <Input
-                      id="quiz-answer"
-                      type="password"
-                      placeholder="e.g., Paris"
-                      value={quizAnswer}
-                      onChange={(e) => setQuizAnswer(e.target.value)}
-                      className="input-focus rounded-xl border-border bg-background h-12 focus-ring"
-                    />
-                  </div>
-                  <p className="text-sm text-muted-foreground italic">
-                    Users must answer correctly to access the file. Answers are
-                    case-insensitive.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Delayed File Access */}
-          <div className="space-y-8 border-t border-border pt-8">
-            <h3 className="text-2xl font-bold text-foreground flex items-center gap-3">
-              <Clock className="h-6 w-6 text-green-500" />
-              Delayed File Access (Optional)
-            </h3>
-
-            <div className="space-y-6">
-              <div className="flex items-center space-x-4 p-6 rounded-xl bg-muted/30 border border-border hover:border-green-500/30 transition-all duration-200">
-                <Checkbox
-                  id="enable-delayed-access"
-                  checked={enableDelayedAccess}
-                  onCheckedChange={(checked) =>
-                    setEnableDelayedAccess(checked === true)
-                  }
-                  className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500 w-5 h-5"
-                />
-                <Label
-                  htmlFor="enable-delayed-access"
-                  className="text-base font-medium text-foreground cursor-pointer flex items-center gap-3"
-                >
-                  <Clock className="h-5 w-5 text-green-500" />
-                  Schedule Access
-                </Label>
-              </div>
-
-              {enableDelayedAccess && (
-                <div className="pl-10 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label
-                        htmlFor="delayed-value"
-                        className="text-base font-medium text-foreground block mb-2"
-                      >
-                        Unlock After
-                      </Label>
-                      <Input
-                        id="delayed-value"
-                        type="number"
-                        placeholder="e.g., 24"
-                        value={delayedAccessValue}
-                        onChange={(e) => setDelayedAccessValue(e.target.value)}
-                        min="1"
-                        className="input-focus rounded-xl border-border bg-background h-12 focus-ring"
-                      />
-                    </div>
-                    <div>
-                      <Label
-                        htmlFor="delayed-type"
-                        className="text-base font-medium text-foreground block mb-2"
-                      >
-                        Time Unit
-                      </Label>
-                      <select
-                        id="delayed-type"
-                        value={delayedAccessType}
-                        onChange={(e) =>
-                          setDelayedAccessType(
-                            e.target.value as "minutes" | "hours" | "days",
-                          )
-                        }
-                        className="w-full h-12 px-4 rounded-xl border border-border bg-background text-foreground text-base focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all"
-                      >
-                        <option value="minutes">Minutes</option>
-                        <option value="hours">Hours</option>
-                        <option value="days">Days</option>
-                      </select>
-                    </div>
-                  </div>
-                  <p className="text-sm text-muted-foreground italic">
-                    File will be inaccessible until the specified time. QR code
-                    remains valid but locked.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
+          {/* Generate Button */}
           <div className="pt-8">
             <Button
               onClick={handleGenerateAndContinue}
@@ -1293,29 +1133,13 @@ export default function UploadPage() {
                   <Loader2 className="mr-3 h-6 w-6 animate-spin" />
                   Generating QR Code...
                 </>
-              ) : canGenerate ? (
-                <>
-                  <Zap className="mr-3 h-6 w-6 animate-pulse" />
-                  Generate QR Code 🚀
-                </>
               ) : (
                 <>
                   <Zap className="mr-3 h-6 w-6" />
-                  Complete Steps to Generate
+                  Generate QR Code
                 </>
               )}
             </Button>
-
-            {/* Progress Hint */}
-            {!canGenerate && (
-              <p className="text-center text-sm text-muted-foreground mt-4 animate-fade-in">
-                {!hasContent
-                  ? "📁 Please add content to continue"
-                  : !hasValidName
-                    ? "✏️ Please name your QR code"
-                    : "⚙️ Configure security settings if needed"}
-              </p>
-            )}
           </div>
 
           {/* Continue to QR Button */}
