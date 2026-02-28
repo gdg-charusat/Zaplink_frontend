@@ -1,26 +1,11 @@
-import { createContext, useContext, useEffect, useState } from "react";
-
-type Theme = "dark" | "light";
+import { useEffect, useState } from "react";
+import { ThemeProviderContext, type Theme, type ThemeProviderState } from "./theme-context";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
   defaultTheme?: Theme;
   storageKey?: string;
 };
-
-type ThemeProviderState = {
-  theme: Theme;
-  setTheme: (theme: Theme) => void;
-  applySystemTheme: () => void;
-};
-
-const initialState: ThemeProviderState = {
-  theme: "dark",
-  setTheme: () => null,
-  applySystemTheme: () => null,
-};
-
-const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 
 export function ThemeProvider({
   children,
@@ -47,6 +32,8 @@ export function ThemeProvider({
       }
     } catch {
       // Ignore matchMedia errors and fall back to default theme
+    } catch (e) {
+      console.warn("Theme detection failed:", e);
     }
     return defaultTheme;
   };
@@ -76,6 +63,8 @@ export function ThemeProvider({
       localStorage.setItem(explicitKey, "false");
     } catch {
       // Ignore storage write errors
+    } catch (e) {
+      console.warn("Theme storage failed:", e);
     }
     setExplicit(false);
     setThemeState(sys);
@@ -87,6 +76,8 @@ export function ThemeProvider({
       localStorage.setItem(explicitKey, "true");
     } catch {
       // Ignore storage write errors
+    } catch (e) {
+      console.warn("Theme storage failed:", e);
     }
     setExplicit(true);
     setThemeState(t);
@@ -108,6 +99,13 @@ export function ThemeProvider({
       return () => {
         if (mq.removeEventListener) mq.removeEventListener("change", handler);
         else mq.removeListener(handler);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      else (mq as any).addListener(handler);
+
+      return () => {
+        if (mq.removeEventListener) mq.removeEventListener("change", handler);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        else (mq as any).removeListener(handler);
       };
     } catch {
       // Ignore matchMedia errors; theme will stay as-is
@@ -115,7 +113,7 @@ export function ThemeProvider({
     }
   }, [explicit]);
 
-  const value = {
+  const value: ThemeProviderState = {
     theme,
     setTheme,
     applySystemTheme,
@@ -127,12 +125,3 @@ export function ThemeProvider({
     </ThemeProviderContext.Provider>
   );
 }
-
-export const useTheme = () => {
-  const context = useContext(ThemeProviderContext);
-
-  if (context === undefined)
-    throw new Error("useTheme must be used within a ThemeProvider");
-
-  return context;
-};
