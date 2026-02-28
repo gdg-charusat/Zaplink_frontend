@@ -6,9 +6,9 @@ import {
   Download,
   Copy,
   Share2,
-  Sparkles,
   Check,
-  Palette,
+  PackageOpen,
+  Sparkles,
   X,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
@@ -22,6 +22,14 @@ import {
 } from "./ui/select";
 import { Label } from "./ui/label";
 import { toast } from "sonner";
+
+import FormatSelector from "./export/FormatSelector";
+import ResolutionSelector from "./export/ResolutionSelector";
+import ExportPreview from "./export/ExportPreview";
+import type { ExportFormat } from "../lib/qr-export";
+import QRScanPreview from "./QRScanPreview";
+
+/* ================= TYPES ================= */
 
 type FrameOption =
   | "none"
@@ -37,6 +45,13 @@ type CustomizePageState = {
   qrCode: string;
   type: string;
   name: string;
+  deletionToken?: string;
+  hasPassword?: boolean;
+  viewLimit?: number;
+  expiresAt?: string;
+  quizQuestion?: string;
+  unlockAt?: string;
+  originalUrl?: string;
 };
 
 export default function CustomizePage() {
@@ -47,6 +62,12 @@ export default function CustomizePage() {
   const [frameStyle, setFrameStyle] = useState<FrameOption>("none");
   const [logo, setLogo] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [fgColor, setFgColor] = useState("#000");
+  const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
+  const [exportResolution, setExportResolution] = useState<number>(1200);
+  const [exportQuality, setExportQuality] = useState(90);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [isExporting, _setIsExporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const qrValue = state?.shortUrl || "https://zaplink.example.com/demo123";
@@ -173,6 +194,10 @@ export default function CustomizePage() {
     }
   };
 
+  const handleBatchDownload = () => {
+    toast.info("Batch download feature coming soon!");
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 max-w-7xl">
@@ -191,11 +216,10 @@ export default function CustomizePage() {
             </span>
           </div>
 
-          {/* Two-column layout: Preview on left, Controls on right */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
-            {/* QR Preview Card */}
-            <div className="flex flex-col items-center justify-center order-2 lg:order-1">
-              <div className="bg-gradient-to-br from-muted/30 to-muted/10 p-8 sm:p-12 rounded-3xl border border-border/50 shadow-xl backdrop-blur-sm">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 lg:gap-12">
+            {/* QR Code Preview */}
+            <div className="flex flex-col items-center justify-center">
+              <div className="bg-muted/20 p-10 rounded-3xl border border-border">
                 <div
                   ref={qrRef}
                   className="flex items-center justify-center transition-all duration-500 hover:scale-105"
@@ -205,7 +229,7 @@ export default function CustomizePage() {
                     value={qrValue}
                     size={240}
                     bgColor="#fff"
-                    fgColor="#000"
+                    fgColor={fgColor}
                     level="H"
                     includeMargin
                     imageSettings={
@@ -221,16 +245,56 @@ export default function CustomizePage() {
               </p>
             </div>
 
-            {/* Customization Controls */}
-            <div className="space-y-8 order-1 lg:order-2">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2 bg-primary/10 rounded-lg">
-                  <Palette className="h-5 w-5 text-primary" />
-                </div>
-                <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
-                  Design Options
-                </h2>
+            {/* Scan Preview Panel */}
+            <div className="lg:col-span-1">
+              <QRScanPreview
+                name={state?.name || "Untitled Zap"}
+                type={state?.type || "UNIVERSAL"}
+                destinationUrl={state?.originalUrl || state?.shortUrl}
+                hasPassword={state?.hasPassword || false}
+                viewLimit={state?.viewLimit}
+                expiresAt={state?.expiresAt}
+                quizQuestion={state?.quizQuestion}
+                unlockAt={state?.unlockAt}
+              />
+            </div>
+
+            {/* Controls */}
+            <div className="lg:col-span-1 space-y-6">
+              {/* QR Color Picker */}
+              <div className="space-y-4">
+                <Label
+                  htmlFor="qr-color"
+                  className="text-base font-semibold text-foreground flex items-center gap-2"
+                >
+                  <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                  QR Color
+                </Label>
+                <input
+                  id="qr-color"
+                  type="color"
+                  value={fgColor}
+                  onChange={(e) => setFgColor(e.target.value)}
+                  className="w-full h-12 rounded-xl border border-border cursor-pointer"
+                />
               </div>
+
+              {/* Export Settings */}
+              <FormatSelector
+                value={exportFormat}
+                onChange={setExportFormat}
+              />
+              <ResolutionSelector
+                value={exportResolution}
+                onChange={setExportResolution}
+                disabled={exportFormat === "svg" || exportFormat === "pdf"}
+              />
+              <ExportPreview
+                format={exportFormat}
+                resolution={exportResolution}
+                quality={exportQuality}
+                onQualityChange={setExportQuality}
+              />
 
               {/* Frame Style Selector */}
               <div className="space-y-4">
@@ -355,6 +419,15 @@ export default function CustomizePage() {
                   >
                     <Download className="h-5 w-5 mr-2" />
                     Download QR Code
+                  </Button>
+                  <Button
+                    onClick={handleBatchDownload}
+                    disabled={isExporting}
+                    variant="outline"
+                    className="h-12 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary font-semibold rounded-xl transition-all duration-300 hover:scale-[1.02] bg-background focus-ring"
+                  >
+                    <PackageOpen className="h-5 w-5 mr-2" />
+                    Download All Formats
                   </Button>
                   <div className="grid grid-cols-2 gap-4">
                     <Button
