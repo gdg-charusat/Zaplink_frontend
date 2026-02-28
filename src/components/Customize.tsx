@@ -7,14 +7,9 @@ import {
   Copy,
   Share2,
   Check,
-  BarChart3,
-  Trash2,
-  Shield,
-  AlertTriangle,
-  Eye,
-  EyeOff,
   PackageOpen,
   Sparkles,
+  X,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "./ui/button";
@@ -32,7 +27,6 @@ import FormatSelector from "./export/FormatSelector";
 import ResolutionSelector from "./export/ResolutionSelector";
 import ExportPreview from "./export/ExportPreview";
 import type { ExportFormat } from "../lib/qr-export";
-import { exportQRCode, batchExport } from "../lib/qr-export";
 import QRScanPreview from "./QRScanPreview";
 
 /* ================= TYPES ================= */
@@ -68,6 +62,12 @@ export default function CustomizePage() {
   const [frameStyle, setFrameStyle] = useState<FrameOption>("none");
   const [logo, setLogo] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [fgColor, setFgColor] = useState("#000");
+  const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
+  const [exportResolution, setExportResolution] = useState<number>(1200);
+  const [exportQuality, setExportQuality] = useState(90);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [isExporting, _setIsExporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const qrValue = state?.shortUrl || "https://zaplink.example.com/demo123";
@@ -194,6 +194,10 @@ export default function CustomizePage() {
     }
   };
 
+  const handleBatchDownload = () => {
+    toast.info("Batch download feature coming soon!");
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <main className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 max-w-7xl">
@@ -225,7 +229,7 @@ export default function CustomizePage() {
                     value={qrValue}
                     size={240}
                     bgColor="#fff"
-                    fgColor="#000"
+                    fgColor={fgColor}
                     level="H"
                     includeMargin
                     imageSettings={
