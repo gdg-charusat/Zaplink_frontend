@@ -24,3 +24,6 @@ env
 *.njsproj
 *.sln
 *.sw?
+
+# Documentation
+docs/

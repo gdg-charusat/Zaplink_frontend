@@ -5,22 +5,24 @@ const navLinks = [
   { label: "Home", to: "/" },
   { label: "How it Works", to: "/how-it-works" },
   { label: "About Us", to: "/about" },
+  { label: "Privacy Policy", to: "/privacy" },
+  { label: "Terms of Service", to: "/terms" },
 ];
 
 const socialLinks = [
   {
     label: "GitHub",
-    href: "https://github.com/zaplink",
+    href: "https://github.com/gdg-charusat/Zaplink_frontend",
     icon: Github,
   },
   {
     label: "Twitter / X",
-    href: "https://twitter.com/zaplink",
+    href: "https://twitter.com/gdgcharusat",
     icon: Twitter,
   },
   {
     label: "LinkedIn",
-    href: "https://linkedin.com/company/zaplink",
+    href: "https://linkedin.com/company/gdgcharusat",
     icon: Linkedin,
   },
 ];

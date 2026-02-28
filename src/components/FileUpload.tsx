@@ -13,6 +13,7 @@ import {
   FileSpreadsheet,
   Presentation,
 } from "lucide-react";
+import { toast } from "sonner";
 
 // ── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -29,6 +30,12 @@ export interface FileUploadProps {
   onError?: (error: string) => void;
   /** Allow multiple file uploads */
   multiple?: boolean;
+  /** Real-time progress from parent */
+  uploadProgress?: number;
+  /** Is the file currently uploading to the server? */
+  isUploading?: boolean;
+  /** Callback to trigger cancellation of upload */
+  onCancel?: () => void;
 }
 
 interface UploadFileState {
@@ -63,7 +70,7 @@ function getFileExtension(filename: string): string {
  * Determine what kind of preview is possible for a given file.
  */
 function detectPreviewType(
-  file: File
+  file: File,
 ): "image" | "video" | "audio" | "pdf" | "text" | "none" {
   const mime = file.type;
   const ext = getFileExtension(file.name);
@@ -74,7 +81,15 @@ function detectPreviewType(
   if (mime === "application/pdf" || ext === ".pdf") return "pdf";
 
   // Text-readable formats
-  const textExtensions = [".txt", ".csv", ".rtf", ".md", ".json", ".xml", ".log"];
+  const textExtensions = [
+    ".txt",
+    ".csv",
+    ".rtf",
+    ".md",
+    ".json",
+    ".xml",
+    ".log",
+  ];
   if (mime.startsWith("text/") || textExtensions.includes(ext)) return "text";
 
   return "none";
@@ -84,10 +99,14 @@ function getFileIcon(file: File): React.ReactNode {
   const mime = file.type;
   const ext = getFileExtension(file.name);
 
-  if (mime.startsWith("image/")) return <ImageIcon className="h-5 w-5 text-purple-500" />;
-  if (mime.startsWith("video/")) return <Film className="h-5 w-5 text-blue-500" />;
-  if (mime.startsWith("audio/")) return <Music className="h-5 w-5 text-pink-500" />;
-  if (mime === "application/pdf") return <FileText className="h-5 w-5 text-red-500" />;
+  if (mime.startsWith("image/"))
+    return <ImageIcon className="h-5 w-5 text-purple-500" />;
+  if (mime.startsWith("video/"))
+    return <Film className="h-5 w-5 text-blue-500" />;
+  if (mime.startsWith("audio/"))
+    return <Music className="h-5 w-5 text-pink-500" />;
+  if (mime === "application/pdf")
+    return <FileText className="h-5 w-5 text-red-500" />;
 
   // Spreadsheets
   if ([".xls", ".xlsx", ".csv"].includes(ext) || mime.includes("spreadsheet"))
@@ -98,7 +117,11 @@ function getFileIcon(file: File): React.ReactNode {
     return <Presentation className="h-5 w-5 text-orange-500" />;
 
   // Documents
-  if ([".doc", ".docx", ".rtf", ".txt"].includes(ext) || mime.includes("document") || mime.includes("word"))
+  if (
+    [".doc", ".docx", ".rtf", ".txt"].includes(ext) ||
+    mime.includes("document") ||
+    mime.includes("word")
+  )
     return <FileText className="h-5 w-5 text-blue-600" />;
 
   // Archives
@@ -123,12 +146,14 @@ const FileUpload: React.FC<FileUploadProps> = ({
   onUpload,
   onError,
   multiple = true,
+  uploadProgress = 0,
+  isUploading = false,
+  onCancel,
 }) => {
   const [files, setFiles] = useState<UploadFileState[]>([]);
   const [isDragActive, setIsDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dragCounterRef = useRef(0);
-  const intervalsRef = useRef<Set<ReturnType<typeof setInterval>>>(new Set());
   const objectUrlsRef = useRef<Set<string>>(new Set());
   const isInitialMount = useRef(true);
 
@@ -149,12 +174,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
   // ── Cleanup on unmount ─────────────────────────────────────────────────────
 
   useEffect(() => {
-    const intervals = intervalsRef.current;
     const objectUrls = objectUrlsRef.current;
     return () => {
-      // Clear all running intervals
-      intervals.forEach((id) => clearInterval(id));
-      intervals.clear();
       // Revoke all object URLs
       objectUrls.forEach((url) => URL.revokeObjectURL(url));
       objectUrls.clear();
@@ -180,7 +201,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
       if (acceptedFileTypes && acceptedFileTypes.length > 0) {
         const ext = getFileExtension(file.name);
         const extMatch = acceptedFileTypes.some(
-          (t) => t.startsWith(".") && ext === t.toLowerCase()
+          (t) => t.startsWith(".") && ext === t.toLowerCase(),
         );
         const mimeMatch = acceptedFileTypes.some((t) => {
           if (t.startsWith(".")) return false; // already checked above
@@ -198,7 +219,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
       return null;
     },
-    [maxSizeInMB, acceptedFileTypes]
+    [maxSizeInMB, acceptedFileTypes],
   );
 
   // ── Generate preview for a file ────────────────────────────────────────────
@@ -213,8 +234,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
           if (result) {
             setFiles((prev) =>
               prev.map((f) =>
-                f.id === fileId ? { ...f, previewUrl: result } : f
-              )
+                f.id === fileId ? { ...f, previewUrl: result } : f,
+              ),
             );
           }
         };
@@ -234,8 +255,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
           objectUrlsRef.current.add(objUrl);
           setFiles((prev) =>
             prev.map((f) =>
-              f.id === fileId ? { ...f, previewUrl: objUrl } : f
-            )
+              f.id === fileId ? { ...f, previewUrl: objUrl } : f,
+            ),
           );
         } catch {
           console.warn(`Failed to create object URL for ${file.name}`);
@@ -253,8 +274,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
               prev.map((f) =>
                 f.id === fileId
                   ? { ...f, previewUrl: `text://${truncated}` }
-                  : f
-              )
+                  : f,
+              ),
             );
           }
         };
@@ -266,47 +287,8 @@ const FileUpload: React.FC<FileUploadProps> = ({
         reader.readAsText(slice);
       }
     },
-    []
+    [],
   );
-
-  // ── Process files ──────────────────────────────────────────────────────────
-
-  // ── Simulate progress (client-side visual feedback) ──────────────────────
-
-  const simulateUploadProgress = useCallback((fileId: string) => {
-    setFiles((prev) =>
-      prev.map((f) =>
-        f.id === fileId ? { ...f, status: "uploading" as const, progress: 0 } : f
-      )
-    );
-
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += Math.random() * 25 + 10;
-      if (progress >= 100) {
-        progress = 100;
-        clearInterval(interval);
-        intervalsRef.current.delete(interval);
-        setFiles((prev) =>
-          prev.map((f) =>
-            f.id === fileId
-              ? { ...f, progress: 100, status: "success" as const }
-              : f
-          )
-        );
-      } else {
-        setFiles((prev) =>
-          prev.map((f) =>
-            f.id === fileId
-              ? { ...f, progress: Math.min(progress, 99) }
-              : f
-          )
-        );
-      }
-    }, 200);
-
-    intervalsRef.current.add(interval);
-  }, []);
 
   // ── Process files ──────────────────────────────────────────────────────────
 
@@ -319,13 +301,13 @@ const FileUpload: React.FC<FileUploadProps> = ({
 
       setFiles((prevFiles) => {
         const currentCount = prevFiles.filter(
-          (f) => f.status !== "error"
+          (f) => f.status !== "error",
         ).length;
         const slotsAvailable = maxAllowed - currentCount;
 
         if (slotsAvailable <= 0 && multiple) {
           onError?.(
-            `Maximum of ${maxAllowed} file${maxAllowed > 1 ? "s" : ""} allowed`
+            `Maximum of ${maxAllowed} file${maxAllowed > 1 ? "s" : ""} allowed`,
           );
           return prevFiles;
         }
@@ -334,9 +316,13 @@ const FileUpload: React.FC<FileUploadProps> = ({
           ? fileArray.slice(0, Math.max(slotsAvailable, 0))
           : fileArray.slice(0, 1);
 
-        if (multiple && fileArray.length > slotsAvailable && slotsAvailable > 0) {
+        if (
+          multiple &&
+          fileArray.length > slotsAvailable &&
+          slotsAvailable > 0
+        ) {
           onError?.(
-            `Only ${slotsAvailable} more file${slotsAvailable > 1 ? "s" : ""} can be added (limit: ${maxAllowed})`
+            `Only ${slotsAvailable} more file${slotsAvailable > 1 ? "s" : ""} can be added (limit: ${maxAllowed})`,
           );
         }
 
@@ -348,7 +334,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
             (f) =>
               f.file.name === file.name &&
               f.file.size === file.size &&
-              f.status !== "error"
+              f.status !== "error",
           );
           if (isDuplicate) {
             onError?.(`"${file.name}" is already added`);
@@ -366,12 +352,11 @@ const FileUpload: React.FC<FileUploadProps> = ({
             error: validationError || undefined,
           };
 
-          // Schedule preview generation and progress simulation
+          // Schedule preview generation
           if (!validationError) {
             // Use setTimeout to ensure state is set before generating preview
             setTimeout(() => {
               generatePreview(file, state.id, detectedType);
-              simulateUploadProgress(state.id);
             }, 0);
           }
 
@@ -384,25 +369,32 @@ const FileUpload: React.FC<FileUploadProps> = ({
         return multiple ? [...prevFiles, ...newStates] : newStates;
       });
     },
-    [maxFiles, multiple, onError, validateFile, generatePreview, simulateUploadProgress]
+    [maxFiles, multiple, onError, validateFile, generatePreview],
   );
 
   // ── Remove file ────────────────────────────────────────────────────────────
 
-  const removeFile = useCallback((fileId: string) => {
-    setFiles((prev) => {
-      const fileState = prev.find((f) => f.id === fileId);
-      // Clean up object URL if it exists (skip data URLs and text:// URLs)
-      if (
-        fileState?.previewUrl &&
-        fileState.previewUrl.startsWith("blob:")
-      ) {
-        URL.revokeObjectURL(fileState.previewUrl);
-        objectUrlsRef.current.delete(fileState.previewUrl);
+  const removeFile = useCallback(
+    (fileId: string) => {
+      setFiles((prev) => {
+        const fileState = prev.find((f) => f.id === fileId);
+        // Clean up object URL if it exists (skip data URLs and text:// URLs)
+        if (fileState?.previewUrl && fileState.previewUrl.startsWith("blob:")) {
+          URL.revokeObjectURL(fileState.previewUrl);
+          objectUrlsRef.current.delete(fileState.previewUrl);
+        }
+        return prev.filter((f) => f.id !== fileId);
+      });
+
+      // Trigger cancellation if currently uploading
+      if (isUploading) {
+        onCancel?.();
+      } else {
+        toast.info("File removed");
       }
-      return prev.filter((f) => f.id !== fileId);
-    });
-  }, []);
+    },
+    [isUploading, onCancel],
+  );
 
   // ── Drag & Drop handlers ──────────────────────────────────────────────────
 
@@ -440,7 +432,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         e.dataTransfer.clearData();
       }
     },
-    [processFiles]
+    [processFiles],
   );
 
   // ── Click & keyboard handlers ─────────────────────────────────────────────
@@ -456,7 +448,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         handleClick();
       }
     },
-    [handleClick]
+    [handleClick],
   );
 
   const handleFileInputChange = useCallback(
@@ -467,7 +459,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
         e.target.value = "";
       }
     },
-    [processFiles]
+    [processFiles],
   );
 
   // ── Build accept string ───────────────────────────────────────────────────
@@ -574,9 +566,10 @@ const FileUpload: React.FC<FileUploadProps> = ({
           relative rounded-2xl border-2 border-dashed p-8 sm:p-10
           cursor-pointer transition-all duration-300 ease-out
           focus-ring outline-none
-          ${isDragActive
-            ? "border-primary bg-primary/5 scale-[1.02] shadow-lg shadow-primary/10"
-            : "border-border bg-muted/20 hover:border-primary/50 hover:bg-muted/40"
+          ${
+            isDragActive
+              ? "border-primary bg-primary/5 scale-[1.02] shadow-lg shadow-primary/10"
+              : "border-border bg-muted/20 hover:border-primary/50 hover:bg-muted/40"
           }
         `}
         onDragEnter={handleDragEnter}
@@ -605,8 +598,9 @@ const FileUpload: React.FC<FileUploadProps> = ({
             `}
           >
             <Upload
-              className={`h-8 w-8 sm:h-10 sm:w-10 transition-colors duration-300 ${isDragActive ? "text-primary" : "text-muted-foreground"
-                }`}
+              className={`h-8 w-8 sm:h-10 sm:w-10 transition-colors duration-300 ${
+                isDragActive ? "text-primary" : "text-muted-foreground"
+              }`}
             />
           </div>
 
@@ -649,11 +643,12 @@ const FileUpload: React.FC<FileUploadProps> = ({
               className={`
                 file-card-enter
                 rounded-xl border transition-all duration-300 overflow-hidden
-                ${fileState.status === "error"
-                  ? "border-destructive/50 bg-destructive/5"
-                  : fileState.status === "success"
-                    ? "border-primary/30 bg-primary/5"
-                    : "border-border bg-muted/20"
+                ${
+                  fileState.status === "error"
+                    ? "border-destructive/50 bg-destructive/5"
+                    : uploadProgress === 100
+                      ? "border-primary/30 bg-primary/5"
+                      : "border-border bg-muted/20"
                 }
               `}
             >
@@ -673,7 +668,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                     <p className="font-medium text-foreground truncate text-sm sm:text-base">
                       {fileState.file.name}
                     </p>
-                    {fileState.status === "success" && (
+                    {uploadProgress === 100 && (
                       <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" />
                     )}
                     {fileState.status === "error" && (
@@ -694,26 +689,30 @@ const FileUpload: React.FC<FileUploadProps> = ({
                     </p>
                   )}
 
-                  {/* Progress bar */}
-                  {(fileState.status === "uploading" ||
-                    fileState.status === "success") && (
-                      <div className="mt-2">
-                        <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full transition-all duration-300 ease-out ${fileState.status === "success"
+                  {/* REAL-TIME PROGRESS BAR */}
+                  {(isUploading || fileState.progress === 100) && (
+                    <div className="mt-2">
+                      <div className="h-2 bg-muted rounded-full overflow-hidden shadow-inner">
+                        <div
+                          className={`h-full rounded-full transition-all duration-300 ease-out shadow-glow ${
+                            (uploadProgress || fileState.progress) === 100
                               ? "bg-primary"
-                              : "bg-primary/70"
-                              }`}
-                            style={{ width: `${fileState.progress}%` }}
-                          />
-                        </div>
-                        <p className="text-[11px] text-muted-foreground mt-1">
-                          {fileState.status === "success"
-                            ? "Ready"
-                            : `${Math.round(fileState.progress)}%`}
-                        </p>
+                              : "bg-primary/70 animate-pulse"
+                          }`}
+                          style={{
+                            // If parent is uploading, use global progress. Otherwise use local state.
+                            width: `${isUploading ? uploadProgress : fileState.progress}%`,
+                          }}
+                        />
                       </div>
-                    )}
+                      <p className="text-[11px] text-muted-foreground mt-1 font-medium tracking-wide">
+                        {(isUploading ? uploadProgress : fileState.progress) ===
+                        100
+                          ? "Ready & Processing..."
+                          : `${isUploading ? uploadProgress : Math.round(fileState.progress)}% Uploaded`}
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Remove button */}
@@ -722,6 +721,7 @@ const FileUpload: React.FC<FileUploadProps> = ({
                   onClick={(e) => {
                     e.stopPropagation();
                     removeFile(fileState.id);
+                    toast.info("File removed"); // Added toast
                   }}
                   className="p-2 hover:bg-destructive/10 rounded-lg transition-colors duration-200 group focus-ring flex-shrink-0"
                   aria-label={`Remove ${fileState.file.name}`}
