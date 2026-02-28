@@ -32,8 +32,6 @@ export function ThemeProvider({
       }
     } catch {
       // Ignore matchMedia errors and fall back to default theme
-    } catch (e) {
-      console.warn("Theme detection failed:", e);
     }
     return defaultTheme;
   };
@@ -63,8 +61,6 @@ export function ThemeProvider({
       localStorage.setItem(explicitKey, "false");
     } catch {
       // Ignore storage write errors
-    } catch (e) {
-      console.warn("Theme storage failed:", e);
     }
     setExplicit(false);
     setThemeState(sys);
@@ -76,8 +72,6 @@ export function ThemeProvider({
       localStorage.setItem(explicitKey, "true");
     } catch {
       // Ignore storage write errors
-    } catch (e) {
-      console.warn("Theme storage failed:", e);
     }
     setExplicit(true);
     setThemeState(t);
@@ -99,13 +93,6 @@ export function ThemeProvider({
       return () => {
         if (mq.removeEventListener) mq.removeEventListener("change", handler);
         else mq.removeListener(handler);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      else (mq as any).addListener(handler);
-
-      return () => {
-        if (mq.removeEventListener) mq.removeEventListener("change", handler);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        else (mq as any).removeListener(handler);
       };
     } catch {
       // Ignore matchMedia errors; theme will stay as-is
