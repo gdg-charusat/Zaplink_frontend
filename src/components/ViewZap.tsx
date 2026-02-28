@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Shield, AlertTriangle, Home, Lock, Loader2 } from "lucide-react";
-
+import { Skeleton } from "./ui/skeleton";
 function getErrorMessage(errorParam: string | null) {
   if (!errorParam) return null;
   if (errorParam === "viewlimit")
@@ -303,18 +303,107 @@ export default function ViewZap() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary/30 border-t-primary rounded-full loading-spinner mx-auto mb-6"></div>
-          <div className="text-lg text-muted-foreground">
-            Loading your content...
-          </div>
-        </div>
+  return (
+  <div className="min-h-screen flex flex-col items-center justify-center bg-background p-6">
+
+    {/* ================= LOADING STATE ================= */}
+    {loading && (
+      <div className="bg-card rounded-3xl shadow-lg p-10 border border-border max-w-md w-full text-center space-y-6">
+        <Skeleton className="w-20 h-20 rounded-3xl mx-auto" />
+        <Skeleton className="h-8 w-3/4 mx-auto" />
+        <Skeleton className="h-5 w-full mx-auto" />
+        <Skeleton className="h-5 w-5/6 mx-auto" />
+        <Skeleton className="h-14 w-full rounded-xl" />
       </div>
-    );
-  }
+    )}
+
+    {/* ================= PASSWORD REQUIRED ================= */}
+    {!loading && passwordRequired && (
+      <div className="bg-card rounded-3xl shadow-lg p-10 border border-border max-w-md w-full text-center">
+        <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-8">
+          <Shield className="h-10 w-10 text-primary" />
+        </div>
+
+        <h2 className="text-3xl font-bold text-foreground mb-3">
+          Password Protected
+        </h2>
+
+        <p className="text-muted-foreground mb-8 text-lg">
+          This content is secured. Please enter the password to continue.
+        </p>
+
+        <form onSubmit={handlePasswordSubmit} className="space-y-6">
+          <Input
+            type="password"
+            placeholder="Enter password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="h-14 text-lg rounded-xl"
+            disabled={verifying}
+            autoFocus
+          />
+
+          {passwordError && (
+            <div className="text-destructive text-sm bg-destructive/10 p-4 rounded-xl border border-destructive/20">
+              {passwordError}
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            className="w-full h-14 text-lg rounded-xl"
+            disabled={verifying || !password}
+          >
+            {verifying ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin mr-3" />
+                Verifying...
+              </>
+            ) : (
+              <>
+                <Lock className="h-5 w-5 mr-3" />
+                Unlock Content
+              </>
+            )}
+          </Button>
+        </form>
+      </div>
+    )}
+
+    {/* ================= ERROR STATE ================= */}
+    {!loading && error && (
+      <div className="bg-card rounded-3xl shadow-lg p-10 border border-border max-w-md w-full text-center">
+        {(() => {
+          const ErrorIcon = getErrorIcon(errorType);
+          return (
+            <>
+              <div className="w-20 h-20 bg-destructive/10 rounded-3xl flex items-center justify-center mx-auto mb-8">
+                <ErrorIcon className="h-10 w-10 text-destructive" />
+              </div>
+
+              <h2 className="text-3xl font-bold text-foreground mb-3">
+                {getErrorHeading(errorType)}
+              </h2>
+
+              <p className="text-muted-foreground mb-8 text-lg">
+                {error}
+              </p>
+
+              <Button
+                onClick={() => (window.location.href = "/")}
+                className="h-14 px-8 text-lg rounded-xl"
+              >
+                <Home className="h-5 w-5 mr-3" />
+                Go Home
+              </Button>
+            </>
+          );
+        })()}
+      </div>
+    )}
+
+  </div>
+);
 
   if (passwordRequired) {
     return (
