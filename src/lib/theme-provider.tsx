@@ -45,7 +45,9 @@ export function ThemeProvider({
           ? "dark"
           : "light";
       }
-    } catch {}
+    } catch {
+      // Ignore matchMedia errors and fall back to default theme
+    }
     return defaultTheme;
   };
 
@@ -55,6 +57,7 @@ export function ThemeProvider({
       if (stored === "light" || stored === "dark") return stored;
       return detectSystem();
     } catch {
+      // Ignore storage read errors and fall back to default
       return defaultTheme;
     }
   });
@@ -71,7 +74,9 @@ export function ThemeProvider({
     try {
       localStorage.setItem(storageKey, sys);
       localStorage.setItem(explicitKey, "false");
-    } catch {}
+    } catch {
+      // Ignore storage write errors
+    }
     setExplicit(false);
     setThemeState(sys);
   };
@@ -80,7 +85,9 @@ export function ThemeProvider({
     try {
       localStorage.setItem(storageKey, t);
       localStorage.setItem(explicitKey, "true");
-    } catch {}
+    } catch {
+      // Ignore storage write errors
+    }
     setExplicit(true);
     setThemeState(t);
   };
@@ -96,13 +103,14 @@ export function ThemeProvider({
       };
       // old and new API support
       if (mq.addEventListener) mq.addEventListener("change", handler);
-      else mq.addListener(handler as any);
+      else mq.addListener(handler);
 
       return () => {
         if (mq.removeEventListener) mq.removeEventListener("change", handler);
-        else mq.removeListener(handler as any);
+        else mq.removeListener(handler);
       };
     } catch {
+      // Ignore matchMedia errors; theme will stay as-is
       return;
     }
   }, [explicit]);
