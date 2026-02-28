@@ -149,13 +149,6 @@ export default function Navbar({
               <div className="w-1.5 h-1.5 bg-primary rounded-full"></div>
               About Us
             </Link>
-            <Link
-              to="/dashboard"
-              className="text-sm font-medium text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105 relative group focus-ring rounded-lg px-3 py-2"
-            >
-              My Zaps
-              <span className="absolute -bottom-1 left-3 w-0 h-0.5 bg-primary transition-all duration-300 group-hover:w-[calc(100%-24px)]"></span>
-            </Link>
             <ThemeToggle />
           </nav>
         </div>
