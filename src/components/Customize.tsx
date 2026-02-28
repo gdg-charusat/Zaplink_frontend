@@ -261,43 +261,25 @@ export default function CustomizePage() {
 
             {/* Controls */}
             <div className="lg:col-span-1 space-y-6">
-              <Label>Frame Style</Label>
-              <Select
-                value={frameStyle}
-                onValueChange={(v) => setFrameStyle(v as FrameOption)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {["none", "rounded", "circle", "shadow", "gradient", "border"].map(
-                    (v) => (
-                      <SelectItem key={v} value={v}>
-                        {v}
-                      </SelectItem>
-                    )
-                  )}
-                </SelectContent>
-              </Select>
+              {/* QR Color Picker */}
+              <div className="space-y-4">
+                <Label
+                  htmlFor="qr-color"
+                  className="text-base font-semibold text-foreground flex items-center gap-2"
+                >
+                  <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
+                  QR Color
+                </Label>
+                <input
+                  id="qr-color"
+                  type="color"
+                  value={fgColor}
+                  onChange={(e) => setFgColor(e.target.value)}
+                  className="w-full h-12 rounded-xl border border-border cursor-pointer"
+                />
+              </div>
 
-              <Label>QR Color</Label>
-              <input
-                type="color"
-                value={fgColor}
-                onChange={(e) => setFgColor(e.target.value)}
-              />
-
-              <Button onClick={() => fileInputRef.current?.click()}>
-                <Upload className="mr-2 h-4 w-4" /> Upload Logo
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                hidden
-                accept="image/*"
-                onChange={handleLogoUpload}
-              />
-
+              {/* Export Settings */}
               <FormatSelector
                 value={exportFormat}
                 onChange={setExportFormat}
@@ -313,29 +295,6 @@ export default function CustomizePage() {
                 quality={exportQuality}
                 onQualityChange={setExportQuality}
               />
-
-              <Button onClick={handleDownload} disabled={isExporting}>
-                <Download className="mr-2 h-4 w-4" />
-                {isExporting ? "Exporting..." : "Download"}
-              </Button>
-
-              <Button
-                variant="outline"
-                onClick={handleBatchDownload}
-                disabled={isExporting}
-              >
-                <PackageOpen className="mr-2 h-4 w-4" />
-                Download All
-              </Button>
-
-              <div className="flex gap-3">
-                <Button variant="outline" onClick={handleCopyLink}>
-                  {copied ? <Check /> : <Copy />} Copy Link
-                </Button>
-                <Button variant="outline" onClick={handleShare}>
-                  <Share2 /> Share
-                </Button>
-              </div>
 
               {/* Frame Style Selector */}
               <div className="space-y-4">
@@ -460,6 +419,15 @@ export default function CustomizePage() {
                   >
                     <Download className="h-5 w-5 mr-2" />
                     Download QR Code
+                  </Button>
+                  <Button
+                    onClick={handleBatchDownload}
+                    disabled={isExporting}
+                    variant="outline"
+                    className="h-12 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary font-semibold rounded-xl transition-all duration-300 hover:scale-[1.02] bg-background focus-ring"
+                  >
+                    <PackageOpen className="h-5 w-5 mr-2" />
+                    Download All Formats
                   </Button>
                   <div className="grid grid-cols-2 gap-4">
                     <Button
