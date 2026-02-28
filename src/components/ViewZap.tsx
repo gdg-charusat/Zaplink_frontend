@@ -268,6 +268,146 @@ export default function ViewZap() {
 
       if (response.data?.url) {
         window.location.href = response.data.url;
+      // Security fix: password is sent in the POST request body instead of
+      // a query parameter, preventing credential leakage via server logs,
+      // browser history, and monitoring tools.
+      const response = await axios.post(apiUrl, { password });
+
+      // Handle successful response
+      if (response.data) {
+        const { type, url, content, data, name } = response.data;
+
+        // Escape HTML entities for security
+        const escapeHtml = (unsafe: string) =>
+          unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+
+        if (
+          type === "redirect" ||
+          type === "file" ||
+          type === "pdf" ||
+          type === "video" ||
+          type === "audio"
+        ) {
+          // Redirect to the URL
+          window.location.href = url || "";
+        } else if (type === "text" || type === "document") {
+          // Escape HTML entities for security
+          const escapeHtml = (unsafe: string) =>
+            unsafe
+              .replace(/&/g, "&amp;")
+              .replace(/</g, "&lt;")
+              .replace(/>/g, "&gt;")
+              .replace(/"/g, "&quot;")
+              .replace(/'/g, "&#039;");
+          const escapedContent = escapeHtml(content || "");
+          const escapedName = escapeHtml(name || "Untitled");
+          // Use the backend's dark theme template
+          const html = `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>${escapedName}</title>
+                <style>
+                    body {
+                        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                        line-height: 1.6;
+                        color: #e5e7eb;
+                        max-width: 800px;
+                        margin: 0 auto;
+                        padding: 20px;
+                        background-color: #111827;
+                        min-height: 100vh;
+                    }
+                    .container {
+                        background: #1f2937;
+                        padding: 30px;
+                        border-radius: 12px;
+                        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                        border: 1px solid #374151;
+                    }
+                    h1 {
+                        color: #f9fafb;
+                        margin-bottom: 20px;
+                        border-bottom: 2px solid #3b82f6;
+                        padding-bottom: 10px;
+                        font-size: 2rem;
+                        font-weight: 600;
+                    }
+                    .content {
+                        white-space: pre-wrap;
+                        word-wrap: break-word;
+                        font-size: 16px;
+                        color: #d1d5db;
+                        line-height: 1.7;
+                    }
+                    .footer {
+                        margin-top: 30px;
+                        padding-top: 20px;
+                        border-top: 1px solid #374151;
+                        text-align: center;
+                        color: #9ca3af;
+                        font-size: 14px;
+                    }
+                    @media (max-width: 768px) {
+                        body {
+                            padding: 15px;
+                        }
+                        .container {
+                            padding: 20px;
+                        }
+                        h1 {
+                            font-size: 1.5rem;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>${escapedName}</h1>
+                    <div class="content">${escapedContent}</div>
+                    <div class="footer">
+                        Powered by ZapLink
+                    </div>
+                </div>
+            </body>
+            </html>
+          `;
+          const newWindow = window.open("", "_blank");
+          if (newWindow) {
+            newWindow.document.write(html);
+            newWindow.document.close();
+          }
+        } else if (type === "image") {
+          // Display image with sanitized values
+          const escapedImageName = escapeHtml(name || "Image");
+          // Validate data URL to prevent javascript: or other dangerous protocols
+          const isSafeUrl =
+            typeof data === "string" &&
+            (data.startsWith("data:") || data.startsWith("https://"));
+          const safeData = isSafeUrl ? data : "";
+          const newWindow = window.open("", "_blank");
+          if (newWindow) {
+            newWindow.document.write(`
+              <!DOCTYPE html>
+              <html>
+              <head>
+                <title>${escapedImageName}</title>
+              </head>
+              <body style="margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh;">
+                <img src="${safeData}" alt="${escapedImageName}" style="max-width: 100%; max-height: 100vh;">
+              </body>
+              </html>
+            `);
+            newWindow.document.close();
+          }
+        }
       }
     } catch (err: any) {
       const error = err as ApiError;

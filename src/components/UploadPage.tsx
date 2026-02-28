@@ -21,6 +21,8 @@ import { Switch } from "./ui/switch";
 import FileUpload from "./FileUpload";
 import { ImageCompressionControl } from "./ImageCompressionControl";
 import { optimizeImage, isOptimizableImage, formatBytes, type CompressionLevel } from "../lib/image-optimizer";
+import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
+import UnsavedChangesDialog from "./UnsavedChangesDialog";
 
 type FileType =
   | "image"
@@ -107,6 +109,9 @@ function getFormDataHash({
 }
 
 export default function UploadPage() {
+    // Validation states for self-destruct inputs
+    const [viewsError, setViewsError] = useState("");
+    const [timeError, setTimeError] = useState("");
   const location = useLocation();
   const initialType = (location.state?.type as FileType) || "pdf";
   const navigate = useNavigate();
@@ -167,17 +172,9 @@ export default function UploadPage() {
     return data || null;
   });
 
-  // Access Quiz States
-  const [enableAccessQuiz, setEnableAccessQuiz] = useState(false);
-  const [quizQuestion, setQuizQuestion] = useState("");
-  const [quizAnswer, setQuizAnswer] = useState("");
-
-  // Delayed File Access States
-  const [enableDelayedAccess, setEnableDelayedAccess] = useState(false);
-  const [delayedAccessType, setDelayedAccessType] = useState<
-    "minutes" | "hours" | "days"
-  >("hours");
-  const [delayedAccessValue, setDelayedAccessValue] = useState("");
+  // REAL-TIME UPLOAD STATE & REFS
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Persist state to sessionStorage
   useEffect(() => {
@@ -257,6 +254,23 @@ export default function UploadPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
+  // ── Unsaved changes protection ──────────────────────────────────────
+  const isDirty =
+    qrName.trim() !== "" ||
+    uploadedFile !== null ||
+    urlValue.trim() !== "" ||
+    textValue.trim() !== "" ||
+    passwordProtect ||
+    password.trim() !== "" ||
+    selfDestruct ||
+    enableAccessQuiz ||
+    quizQuestion.trim() !== "" ||
+    quizAnswer.trim() !== "" ||
+    enableDelayedAccess ||
+    delayedAccessValue.trim() !== "";
+
+  const { isBlocked, proceed, reset } = useUnsavedChanges(isDirty);
+
   // Reset form state when file type changes
   useEffect(() => {
     setQrName("");
@@ -316,6 +330,22 @@ export default function UploadPage() {
 
   // After successful QR generation, store QR and form hash
   const handleGenerateAndContinue = async () => {
+        // Validate self-destruct views
+        if (selfDestruct && destructViews) {
+          if (!viewsValue.trim() || isNaN(Number(viewsValue)) || Number(viewsValue) < 1) {
+            setViewsError("Please enter a positive integer (min 1)");
+            toast.error("Invalid value for 'After Views'. Please enter a positive integer.");
+            return;
+          }
+        }
+        // Validate self-destruct time
+        if (selfDestruct && destructTime) {
+          if (!timeValue.trim() || isNaN(Number(timeValue)) || Number(timeValue) < 1) {
+            setTimeError("Please enter a positive integer (min 1)");
+            toast.error("Invalid value for 'After Time'. Please enter a positive integer.");
+            return;
+          }
+        }
     if (type === "url") {
       if (!urlValue || !/^https?:\/\//.test(urlValue)) {
         toast.error("Please enter a valid http:// or https:// link");
@@ -390,8 +420,7 @@ export default function UploadPage() {
         setLastQR({ ...data });
         setLastQRFormHash(formHash);
 
-        toast.success("QR Code generated successfully!"); // added toast
-
+        toast.success("QR Code generated successfully!");
         navigate("/customize", {
           state: {
             zapId: data.zapId,
@@ -403,7 +432,8 @@ export default function UploadPage() {
           },
         });
       } catch (error: unknown) {
-        const err = error as ApiError;
+        console.error("Upload error (URL):", error);
+        const err = error as AxiosError<{ message: string }>;
         toast.error(
           `Upload failed: ${err.message}`
         );
@@ -487,8 +517,7 @@ export default function UploadPage() {
         setLastQR({ ...data });
         setLastQRFormHash(formHash);
 
-        toast.success("QR Code generated successfully!"); // added toast
-
+        toast.success("QR Code generated successfully!");
         navigate("/customize", {
           state: {
             zapId: data.zapId,
@@ -510,6 +539,7 @@ export default function UploadPage() {
       return;
     }
 
+    // FILE UPLOAD BRANCH
     if (!uploadedFile) {
       toast.error("Please select a file to upload");
       return;
@@ -559,7 +589,27 @@ export default function UploadPage() {
 
     try {
       setLoading(true);
-      const data = await uploadZap(formData);
+      setUploadProgress(0);
+      abortControllerRef.current = new AbortController();
+
+      const response = await axios.post(
+        `${import.meta.env.VITE_BACKEND_URL}/api/zaps/upload`,
+        formData,
+        {
+          signal: abortControllerRef.current.signal,
+          onUploadProgress: (progressEvent) => {
+            if (progressEvent.total) {
+              const percentCompleted = Math.round(
+                (progressEvent.loaded * 100) / progressEvent.total,
+              );
+              setUploadProgress(percentCompleted);
+              console.log("Upload Progress:", percentCompleted); // Add this to debug in console
+            }
+          },
+        },
+      );
+
+      const { data } = response.data;
 
       const formHash = getFormDataHash({
         qrName,
@@ -580,8 +630,7 @@ export default function UploadPage() {
       setLastQR({ ...data });
       setLastQRFormHash(formHash);
 
-      toast.success("QR Code generated successfully!"); // added toast
-
+      toast.success("QR Code generated successfully!");
       navigate("/customize", {
         state: {
           zapId: data.zapId,
@@ -593,12 +642,18 @@ export default function UploadPage() {
         },
       });
     } catch (error: unknown) {
-      const err = error as ApiError;
+      if (axios.isCancel(error)) {
+        toast.info("Upload canceled by user");
+        return;
+      }
+      console.error("Upload error (file):", error);
+      const err = error as AxiosError<{ message: string }>;
       toast.error(
         `Upload failed: ${err.message}`
       );
     } finally {
       setLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -652,6 +707,11 @@ export default function UploadPage() {
     const value = e.target.value;
     if (value === "" || !isNaN(Number(value))) {
       setViewsValue(value);
+      if (value === "" || Number(value) < 1) {
+        setViewsError("Please enter a positive integer (min 1)");
+      } else {
+        setViewsError("");
+      }
     }
   };
 
@@ -659,6 +719,11 @@ export default function UploadPage() {
     const value = e.target.value;
     if (value === "" || !isNaN(Number(value))) {
       setTimeValue(value);
+      if (value === "" || Number(value) < 1) {
+        setTimeError("Please enter a positive integer (min 1)");
+      } else {
+        setTimeError("");
+      }
     }
   };
 
@@ -829,9 +894,8 @@ export default function UploadPage() {
               <span className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2">
                 {currentStep === 3 ? "Ready!" : "Customize"}
                 <Zap
-                  className={`h-3 w-3 sm:h-4 sm:w-4 transition-all duration-300 ${
-                    currentStep === 3 ? "text-primary animate-pulse" : ""
-                  }`}
+                  className={`h-3 w-3 sm:h-4 sm:w-4 transition-all duration-300 ${currentStep === 3 ? "text-primary animate-pulse" : ""
+                    }`}
                 />
               </span>
             </div>
@@ -849,15 +913,13 @@ export default function UploadPage() {
                       {/* Step Circle */}
                       <div className="flex items-center gap-2">
                         <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-500 transform ${
-                            isCompleted
-                              ? "bg-primary text-primary-foreground scale-110 shadow-lg"
-                              : isActive
-                                ? "bg-primary/30 text-primary scale-105 ring-2 ring-primary ring-offset-2 ring-offset-background"
-                                : "bg-muted text-muted-foreground"
-                          } ${
-                            stepJustCompleted === step ? "animate-bounce" : ""
-                          }`}
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-500 transform ${isCompleted
+                            ? "bg-primary text-primary-foreground scale-110 shadow-lg"
+                            : isActive
+                              ? "bg-primary/30 text-primary scale-105 ring-2 ring-primary ring-offset-2 ring-offset-background"
+                              : "bg-muted text-muted-foreground"
+                            } ${stepJustCompleted === step ? "animate-bounce" : ""
+                            }`}
                           style={{
                             animation:
                               stepJustCompleted === step
@@ -873,11 +935,10 @@ export default function UploadPage() {
                         </div>
                         {/* Step Label - Hidden on mobile for space */}
                         <span
-                          className={`hidden sm:block text-xs font-medium transition-all duration-300 ${
-                            isCompleted || isActive
-                              ? "text-foreground"
-                              : "text-muted-foreground"
-                          }`}
+                          className={`hidden sm:block text-xs font-medium transition-all duration-300 ${isCompleted || isActive
+                            ? "text-foreground"
+                            : "text-muted-foreground"
+                            }`}
                         >
                           {stepLabels[step - 1]}
                         </span>
@@ -886,11 +947,10 @@ export default function UploadPage() {
                       {step < 3 && (
                         <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                           <div
-                            className={`h-full transition-all duration-700 ease-out ${
-                              isCompleted
-                                ? "bg-gradient-to-r from-primary via-primary/90 to-primary shadow-sm"
-                                : "bg-transparent"
-                            }`}
+                            className={`h-full transition-all duration-700 ease-out ${isCompleted
+                              ? "bg-gradient-to-r from-primary via-primary/90 to-primary shadow-sm"
+                              : "bg-transparent"
+                              }`}
                             style={{
                               width: isCompleted ? "100%" : "0%",
                             }}
@@ -939,11 +999,10 @@ export default function UploadPage() {
           >
             <Label className="text-lg font-semibold text-foreground flex items-center gap-3">
               <div
-                className={`w-3 h-3 rounded-full transition-all duration-500 ${
-                  completedSteps.includes(2)
-                    ? "bg-primary shadow-lg"
-                    : "bg-primary/50"
-                }`}
+                className={`w-3 h-3 rounded-full transition-all duration-500 ${completedSteps.includes(2)
+                  ? "bg-primary shadow-lg"
+                  : "bg-primary/50"
+                  }`}
               ></div>
               Name your QR Code
               {completedSteps.includes(2) && (
@@ -1081,6 +1140,9 @@ export default function UploadPage() {
                   onUpload={handleFilesFromUploader}
                   onError={handleUploadError}
                   multiple={false}
+                  uploadProgress={uploadProgress}
+                  isUploading={loading && !!uploadedFile}
+                  onCancel={handleCancelUpload}
                 />
               </div>
 
@@ -1204,11 +1266,15 @@ export default function UploadPage() {
                     <div className="pl-8">
                       <Input
                         type="number"
+                        min={1}
                         placeholder="Number of views"
                         value={viewsValue}
                         onChange={handleViewsValueChange}
-                        className="input-focus rounded-xl border-border bg-background h-12 focus-ring"
+                        className={`input-focus rounded-xl border-border bg-background h-12 focus-ring ${viewsError ? 'border-destructive' : ''}`}
                       />
+                      {viewsError && (
+                        <p className="text-destructive text-xs mt-1">{viewsError}</p>
+                      )}
                     </div>
                   )}
 
@@ -1234,11 +1300,15 @@ export default function UploadPage() {
                     <div className="pl-8">
                       <Input
                         type="number"
+                        min={1}
                         placeholder="Hours until expiration"
                         value={timeValue}
                         onChange={handleTimeValueChange}
-                        className="input-focus rounded-xl border-border bg-background h-12 focus-ring"
+                        className={`input-focus rounded-xl border-border bg-background h-12 focus-ring ${timeError ? 'border-destructive' : ''}`}
                       />
+                      {timeError && (
+                        <p className="text-destructive text-xs mt-1">{timeError}</p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1395,16 +1465,17 @@ export default function UploadPage() {
             <Button
               onClick={handleGenerateAndContinue}
               disabled={!canGenerate || loading}
-              className={`w-full h-16 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-semibold text-xl rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 focus-ring ${
-                canGenerate && !loading
-                  ? "animate-pulse-subtle ring-2 ring-primary/30"
-                  : ""
-              }`}
+              className={`w-full h-16 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-semibold text-xl rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 focus-ring ${canGenerate && !loading
+                ? "animate-pulse-subtle ring-2 ring-primary/30"
+                : ""
+                }`}
             >
               {loading ? (
                 <>
                   <Loader2 className="mr-3 h-6 w-6 animate-spin" />
-                  Generating QR Code...
+                  {uploadProgress > 0 && !!uploadedFile
+                    ? `Uploading... ${uploadProgress}%`
+                    : "Generating QR Code..."}
                 </>
               ) : canGenerate ? (
                 <>
@@ -1459,6 +1530,13 @@ export default function UploadPage() {
             )}
         </div>
       </main>
+
+      {/* Unsaved changes confirmation dialog */}
+      <UnsavedChangesDialog
+        open={isBlocked}
+        onCancel={reset}
+        onConfirm={proceed}
+      />
     </div>
   );
 }

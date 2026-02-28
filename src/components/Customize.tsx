@@ -17,6 +17,7 @@ import {
   AlertTriangle,
   Eye,
   EyeOff,
+  PackageOpen,
 } from "lucide-react";
 import DeleteZapModal from "./DeleteZapModal";
 import { QRCodeSVG } from "qrcode.react";
@@ -30,6 +31,14 @@ import {
 } from "./ui/select";
 import { Label } from "./ui/label";
 import { toast } from "sonner";
+
+import FormatSelector from "./export/FormatSelector";
+import ResolutionSelector from "./export/ResolutionSelector";
+import ExportPreview from "./export/ExportPreview";
+import type { ExportFormat } from "../lib/qr-export";
+import { exportQRCode, batchExport } from "../lib/qr-export";
+
+/* ================= TYPES ================= */
 
 type FrameOption =
   | "none"
@@ -47,6 +56,8 @@ type CustomizePageState = {
   name: string;
   deletionToken?: string;
 };
+
+/* ================= COMPONENT ================= */
 
 export default function CustomizePage() {
   const location = useLocation();
@@ -66,11 +77,20 @@ export default function CustomizePage() {
   const [tokenConfirmed, setTokenConfirmed] = useState(false);
   const [animateQR, setAnimateQR] = useState(false);
 
+  /* ---- Multi-format export (PR feature) ---- */
+  const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
+  const [exportResolution, setExportResolution] = useState(1000);
+  const [exportQuality, setExportQuality] = useState(85);
+  const [isExporting, setIsExporting] = useState(false);
+
   const qrValue = state?.shortUrl || "https://zaplink.example.com/demo123";
+
+  /* ================= HANDLERS ================= */
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target?.result) setLogo(event.target.result as string);
@@ -125,7 +145,7 @@ export default function CustomizePage() {
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!qrRef.current) return;
     const svgElement = qrRef.current.querySelector("svg");
     if (!svgElement) return;
@@ -174,7 +194,9 @@ export default function CustomizePage() {
     img.src = svgUrl;
   };
 
-  const handleCopyLink = async () => {
+  const handleBatchDownload = async () => {
+    if (!qrRef.current) return;
+    setIsExporting(true);
     try {
       await navigator.clipboard.writeText(qrValue);
       setCopied(true);
@@ -183,6 +205,13 @@ export default function CustomizePage() {
     } catch {
       toast.error("Failed to copy link");
     }
+  };
+
+  const handleCopyLink = async () => {
+    await navigator.clipboard.writeText(qrValue);
+    setCopied(true);
+    toast.success("Link copied");
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const handleShare = () => {
@@ -204,6 +233,8 @@ export default function CustomizePage() {
     toast.success("Redirecting to home...");
     setTimeout(() => navigate("/"), 1000);
   };
+
+  /* ================= UI ================= */
 
   return (
     <div className="min-h-screen bg-background">
@@ -400,9 +431,74 @@ export default function CustomizePage() {
                       </div>
                     </div>
                   )}
-                </div>
+                </SelectContent>
+              </Select>
+
+              <Label>QR Color</Label>
+              <input
+                type="color"
+                value={fgColor}
+                onChange={(e) => setFgColor(e.target.value)}
+              />
+
+              <Button onClick={() => fileInputRef.current?.click()}>
+                <Upload className="mr-2 h-4 w-4" /> Upload Logo
+              </Button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                hidden
+                accept="image/*"
+                onChange={handleLogoUpload}
+              />
+
+              <FormatSelector
+                value={exportFormat}
+                onChange={setExportFormat}
+              />
+              <ResolutionSelector
+                value={exportResolution}
+                onChange={setExportResolution}
+                disabled={exportFormat === "svg" || exportFormat === "pdf"}
+              />
+              <ExportPreview
+                format={exportFormat}
+                resolution={exportResolution}
+                quality={exportQuality}
+                onQualityChange={setExportQuality}
+              />
+
+              <Button onClick={handleDownload} disabled={isExporting}>
+                <Download className="mr-2 h-4 w-4" />
+                {isExporting ? "Exporting..." : "Download"}
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleBatchDownload}
+                disabled={isExporting}
+              >
+                <PackageOpen className="mr-2 h-4 w-4" />
+                Download All
+              </Button>
+
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={handleCopyLink}>
+                  {copied ? <Check /> : <Copy />} Copy Link
+                </Button>
+                <Button variant="outline" onClick={handleShare}>
+                  <Share2 /> Share
+                </Button>
               </div>
 
+              {state?.deletionToken && (
+                <Button
+                  variant="destructive"
+                  onClick={() => setDeleteModalOpen(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete Zap
+                </Button>
+              )}
               {/* Actions */}
               <div className="space-y-6 pt-6 border-t border-border">
                 <div className="flex items-center gap-3 mb-4">
