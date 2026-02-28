@@ -1,6 +1,5 @@
-import { useState, useRef } from "react";
-import CopyButton from "./CopyButton";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import React, { useState, useRef } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   ArrowLeft,
   Upload,
@@ -17,7 +16,6 @@ import {
   PackageOpen,
   Sparkles,
 } from "lucide-react";
-import DeleteZapModal from "./DeleteZapModal";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "./ui/button";
 import {
@@ -62,45 +60,24 @@ type CustomizePageState = {
   originalUrl?: string;
 };
 
-/* ================= COMPONENT ================= */
-
 export default function CustomizePage() {
   const location = useLocation();
-  const navigate = useNavigate();
   const state = (location.state as CustomizePageState) || null;
-
   const qrRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [frameStyle, setFrameStyle] = useState<FrameOption>("none");
   const [logo, setLogo] = useState<string | null>(null);
-  const [fgColor, setFgColor] = useState("#000000");
   const [copied, setCopied] = useState(false);
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [tokenCopied, setTokenCopied] = useState(false);
-  const [showToken, setShowToken] = useState(false);
-  const [tokenConfirmed, setTokenConfirmed] = useState(false);
-  const [animateQR, setAnimateQR] = useState(false);
-
-  /* ---- Multi-format export (PR feature) ---- */
-  const [exportFormat, setExportFormat] = useState<ExportFormat>("png");
-  const [exportResolution, setExportResolution] = useState(1000);
-  const [exportQuality, setExportQuality] = useState(85);
-  const [isExporting, setIsExporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const qrValue = state?.shortUrl || "https://zaplink.example.com/demo123";
-
-  /* ================= HANDLERS ================= */
 
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target?.result) setLogo(event.target.result as string);
-      setAnimateQR(true);
-      setTimeout(() => setAnimateQR(false), 400);
     };
     reader.readAsDataURL(file);
   };
@@ -125,98 +102,97 @@ export default function CustomizePage() {
         };
       case "shadow":
         return {
+          boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
           padding: 24,
           background: "hsl(var(--card))",
           borderRadius: 16,
-          boxShadow: "0 20px 60px rgba(0,0,0,0.15)",
         };
       case "gradient":
         return {
           padding: 24,
-          borderRadius: 20,
           background:
             "linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary)) 100%)",
+          borderRadius: 20,
           boxShadow: "0 8px 32px hsl(var(--primary) / 0.3)",
         };
       case "border":
         return {
           padding: 24,
-          borderRadius: 16,
           border: "3px solid hsl(var(--primary))",
+          borderRadius: 16,
           background: "hsl(var(--card))",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.08)",
         };
       default:
         return {};
     }
   };
 
-  const handleDownload = async () => {
+  const handleDownload = () => {
     if (!qrRef.current) return;
-    setIsExporting(true);
-    try {
-      await exportQRCode(qrRef.current, {
-        format: exportFormat,
-        resolution: exportResolution,
-        quality: exportQuality,
-        includeFrame: frameStyle !== "none",
-        includeLogo: !!logo,
-        fileName: `zaplink-qr-${state?.name || "code"}`,
-      });
-      toast.success(`QR exported as ${exportFormat.toUpperCase()}`);
-    } catch {
-      toast.error("Export failed");
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  const handleBatchDownload = async () => {
-    if (!qrRef.current) return;
-    setIsExporting(true);
-    try {
-      await batchExport(
-        qrRef.current,
-        `zaplink-qr-${state?.name || "code"}`,
-        exportResolution,
-        exportQuality
-      );
-      toast.success("All formats downloaded");
-    } catch {
-      toast.error("Batch export failed");
-    } finally {
-      setIsExporting(false);
-    }
+    const svgElement = qrRef.current.querySelector("svg");
+    if (!svgElement) return;
+    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const svgBlob = new Blob([svgData], {
+      type: "image/svg+xml;charset=utf-8",
+    });
+    const svgUrl = URL.createObjectURL(svgBlob);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 300;
+        canvas.height = 300;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          URL.revokeObjectURL(svgUrl);
+          toast.error(
+            "Failed to create canvas context. Please try again."
+          );
+          return;
+        }
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const pngFile = canvas.toDataURL("image/png");
+        const downloadLink = document.createElement("a");
+        downloadLink.download = `zaplink-qr-${state?.name || "code"}.png`;
+        downloadLink.href = pngFile;
+        downloadLink.click();
+        toast.success("Your QR code has been downloaded successfully.");
+      } catch {
+        toast.error("Failed to generate QR image. Please try again.");
+      } finally {
+        URL.revokeObjectURL(svgUrl);
+      }
+    };
+    img.src = svgUrl;
   };
 
   const handleCopyLink = async () => {
-    await navigator.clipboard.writeText(qrValue);
-    setCopied(true);
-    toast.success("Link copied");
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(qrValue);
+      setCopied(true);
+      toast.success("Short link has been copied to clipboard.");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Failed to copy link. Please try again.");
+    }
   };
 
   const handleShare = () => {
-    if (!navigator.share) {
-      toast.error("Sharing not supported");
-      return;
+    if (navigator.share) {
+      navigator
+        .share({
+          title: "My QR Code",
+          text: "Check out my QR code",
+          url: qrValue,
+        })
+        .catch(() => toast.error("Error sharing, please try again."));
+    } else {
+      toast.error("Sharing is not supported on this browser.");
     }
-    navigator.share({ title: "My QR Code", url: qrValue });
   };
-
-  const handleCopyToken = async () => {
-    if (!state?.deletionToken) return;
-    await navigator.clipboard.writeText(state.deletionToken);
-    setTokenCopied(true);
-    toast.success("Deletion token copied");
-    setTimeout(() => setTokenCopied(false), 2000);
-  };
-
-  const handleDeleteSuccess = () => {
-    toast.success("Redirecting to home...");
-    setTimeout(() => navigate("/"), 1000);
-  };
-
-  /* ================= UI ================= */
 
   return (
     <div className="min-h-screen bg-background">
@@ -224,7 +200,7 @@ export default function CustomizePage() {
         <div className="bg-card rounded-3xl shadow-lg p-6 sm:p-8 space-y-8 border border-border">
           {/* Step Indicator */}
           <div className="flex items-center justify-between mb-8">
-            <span className="text-xs sm:text-sm text-primary font-semibold bg-primary/10 px-3 py-1 rounded-full animate-pulse">
+            <span className="text-xs sm:text-sm text-primary font-semibold bg-primary/10 px-3 py-1 rounded-full">
               Step 3 of 3
             </span>
             <div className="flex-1 mx-4 h-2 bg-muted rounded-full overflow-hidden">
@@ -242,26 +218,27 @@ export default function CustomizePage() {
               <div className="bg-muted/20 p-10 rounded-3xl border border-border">
                 <div
                   ref={qrRef}
+                  className="flex items-center justify-center transition-all duration-500 hover:scale-105"
                   style={getFrameStyle()}
-                  className={`transition-all duration-300 ${
-                    animateQR ? "scale-110" : "scale-100"
-                  }`}
                 >
                   <QRCodeSVG
                     value={qrValue}
                     size={240}
                     bgColor="#fff"
-                    fgColor={fgColor}
+                    fgColor="#000"
                     level="H"
                     includeMargin
                     imageSettings={
                       logo
-                        ? { src: logo, width: 50, height: 50, excavate: true }
+                        ? { src: logo, height: 50, width: 50, excavate: true }
                         : undefined
                     }
                   />
                 </div>
               </div>
+              <p className="text-sm text-muted-foreground mt-6 text-center">
+                Scan to preview your QR code
+              </p>
             </div>
 
             {/* Scan Preview Panel */}
@@ -356,34 +333,122 @@ export default function CustomizePage() {
                 </Button>
               </div>
 
-              {state?.deletionToken && (
-                <Button
-                  variant="destructive"
-                  onClick={() => setDeleteModalOpen(true)}
+              {/* Frame Style Selector */}
+              <div className="space-y-4">
+                <Label
+                  htmlFor="frame-style"
+                  className="text-base font-semibold text-foreground flex items-center gap-2"
                 >
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete Zap
-                </Button>
-              )}
+                  <span className="w-2 h-2 bg-primary rounded-full"></span>
+                  Frame Style
+                </Label>
+                <Select
+                  value={frameStyle}
+                  onValueChange={(value: string) =>
+                    setFrameStyle(value as FrameOption)
+                  }
+                >
+                  <SelectTrigger
+                    id="frame-style"
+                    className="w-full h-12 rounded-xl border-border bg-background text-foreground font-medium focus-ring"
+                  >
+                    <SelectValue placeholder="Select a frame style" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border border-border bg-card text-foreground shadow-2xl">
+                    <SelectItem value="none" className="rounded-lg">
+                      None
+                    </SelectItem>
+                    <SelectItem value="rounded" className="rounded-lg">
+                      Rounded Corners
+                    </SelectItem>
+                    <SelectItem value="circle" className="rounded-lg">
+                      Circle
+                    </SelectItem>
+                    <SelectItem value="shadow" className="rounded-lg">
+                      Shadow
+                    </SelectItem>
+                    <SelectItem value="gradient" className="rounded-lg">
+                      Gradient
+                    </SelectItem>
+                    <SelectItem value="border" className="rounded-lg">
+                      Accent Border
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Logo Upload */}
+              <div className="space-y-4">
+                <Label
+                  htmlFor="logo-upload"
+                  className="text-base font-semibold text-foreground flex items-center gap-2"
+                >
+                  <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                  Upload Logo (Optional)
+                </Label>
+                <div
+                  className="relative border-2 border-dashed rounded-2xl p-6 text-center transition-all duration-300 cursor-pointer border-border bg-muted/20 hover:border-primary/50 hover:bg-primary/5 backdrop-blur-sm"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                    id="logo-upload"
+                    accept="image/*"
+                  />
+                  {logo ? (
+                    <div className="flex items-center justify-center space-x-3">
+                      <img
+                        src={logo}
+                        alt="Logo Preview"
+                        className="h-16 w-16 object-contain rounded-lg"
+                      />
+                      <span className="text-foreground font-medium">
+                        Logo uploaded
+                      </span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setLogo(null);
+                        }}
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg focus-ring"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center justify-center space-y-3">
+                      <div className="p-3 bg-primary/10 rounded-xl">
+                        <Upload className="h-8 w-8 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          Click to upload image
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          PNG, JPG up to 2MB
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Actions */}
               <div className="space-y-6 pt-6 border-t border-border">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="p-2 bg-green-500/10 rounded-lg">
                     <Sparkles className="h-5 w-5 text-green-500" />
                   </div>
-                  <h2 className="text-xl font-bold text-foreground">Actions</h2>
+                  <h2 className="text-xl font-bold text-foreground">
+                    Actions
+                  </h2>
                 </div>
-
-                {/* Inline Short URL display with Copy button */}
-                <div className="flex items-center gap-2 p-3 rounded-xl border border-border bg-muted/30">
-                  <span
-                    className="flex-1 truncate text-sm text-muted-foreground font-mono select-all"
-                    title={qrValue}
-                  >
-                    {qrValue}
-                  </span>
-                  <CopyButton text={qrValue} />
-                </div>
-
                 <div className="grid grid-cols-1 gap-4">
                   <Button
                     onClick={handleDownload}
@@ -392,13 +457,6 @@ export default function CustomizePage() {
                     <Download className="h-5 w-5 mr-2" />
                     Download QR Code
                   </Button>
-                  <Link
-                    to={`/zaps/${state?.shortUrl?.split('/').pop() || ''}/analytics`}
-                    className="h-14 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-600 text-white font-semibold rounded-xl transition-all duration-300 hover:scale-[1.02] shadow-lg hover:shadow-xl focus-ring flex items-center justify-center"
-                  >
-                    <BarChart3 className="h-5 w-5 mr-2" />
-                    View Analytics
-                  </Link>
                   <div className="grid grid-cols-2 gap-4">
                     <Button
                       onClick={handleCopyLink}
@@ -429,118 +487,22 @@ export default function CustomizePage() {
                     </Button>
                   </div>
                 </div>
-
-                {/* Deletion Token Section */}
-                {state?.deletionToken && (
-                  <div className="space-y-4 pt-4 border-t border-border/50">
-                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 space-y-3">
-                      <div className="flex items-start gap-3">
-                        <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1 space-y-2">
-                          <h3 className="text-sm font-bold text-amber-600 dark:text-amber-500">
-                            Save Your Deletion Token
-                          </h3>
-                          <p className="text-xs text-muted-foreground">
-                            This token is required to delete your Zap later. Save it
-                            securely - you won't be able to retrieve it again!
-                          </p>
-
-                          {/* Token Display */}
-                          <div className="flex items-center gap-2 p-3 bg-background/50 rounded-lg border border-border">
-                            <Shield className="h-4 w-4 text-primary flex-shrink-0" />
-                            <code className="flex-1 text-xs font-mono break-all select-all">
-                              {showToken
-                                ? state.deletionToken
-                                : "•".repeat(Math.min(state.deletionToken.length, 40))}
-                            </code>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => setShowToken(!showToken)}
-                              className="h-8 w-8 flex-shrink-0"
-                              title={showToken ? "Hide token" : "Show token"}
-                            >
-                              {showToken ? (
-                                <EyeOff className="h-4 w-4" />
-                              ) : (
-                                <Eye className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </div>
-
-                          {/* Token Actions */}
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={handleCopyToken}
-                              className="h-9 rounded-lg text-xs"
-                            >
-                              {tokenCopied ? (
-                                <>
-                                  <Check className="h-3 w-3 mr-1.5" />
-                                  Copied!
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="h-3 w-3 mr-1.5" />
-                                  Copy Token
-                                </>
-                              )}
-                            </Button>
-                            {!tokenConfirmed && (
-                              <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setTokenConfirmed(true);
-                                  toast.success("Token confirmed! Keep it safe.");
-                                }}
-                                className="h-9 rounded-lg text-xs"
-                              >
-                                <Check className="h-3 w-3 mr-1.5" />
-                                I've Saved It
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Delete Button */}
-                    <Button
-                      onClick={() => setDeleteModalOpen(true)}
-                      variant="destructive"
-                      className="w-full h-12 rounded-xl font-semibold transition-all duration-300 hover:scale-[1.02]"
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete This Zap
-                    </Button>
-                  </div>
-                )}
               </div>
             </div>
           </div>
 
-          <Link
-            to="/upload"
-            className="inline-flex items-center gap-2 text-muted-foreground"
-          >
-            <ArrowLeft /> Back to Upload
-          </Link>
+          {/* Back Button */}
+          <div className="mt-8 pt-6 border-t border-border">
+            <Link
+              to="/upload"
+              state={{ type: state?.type?.toLowerCase() || "pdf" }}
+              className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-all duration-200 hover:scale-105 focus-ring rounded-lg p-2"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              <span>Back to Upload</span>
+            </Link>
+          </div>
         </div>
-
-        {state?.zapId && (
-          <DeleteZapModal
-            open={deleteModalOpen}
-            onOpenChange={setDeleteModalOpen}
-            zapId={state.zapId}
-            onDeleteSuccess={handleDeleteSuccess}
-          />
-        )}
       </main>
     </div>
   );
