@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Loader2, Shield, Clock, Eye, Zap, FileText, Link, Type as TypeIcon } from "lucide-react";
+import { Loader2, Shield, Clock, Eye, Zap, FileText, Link, Type as TypeIcon, X } from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
@@ -10,9 +10,12 @@ import axios, { AxiosError } from "axios";
 import { Switch } from "./ui/switch";
 import FileUpload from "./FileUpload";
 
-// Sanitize input: trim + remove dangerous characters
-const sanitizeInput = (value: string) => {
-  return value.trim().replace(/[<>]/g, "");
+// Only trim input. Do NOT modify user content.
+// Validation should be handled separately.
+// Only sanitize for fields where HTML tags are unsafe (e.g., QR name)
+
+const sanitizeQrName = (value: string) => {
+  return value.trim();
 };
 
 type FileType =
@@ -51,6 +54,12 @@ const TYPE_EXTENSIONS: Record<FileType, string[]> = {
   video: [".mp4", ".avi", ".mov", ".wmv", ".flv"],
   url: [],
   text: [],
+};
+
+type FormErrors = {
+  password: string;
+  views: string;
+  expiry: string;
 };
 
 // Add a type for the form data hash function
@@ -107,10 +116,10 @@ export default function UploadPage() {
   const location = useLocation();
   const initialType = (location.state?.type as FileType) || "pdf";
   const navigate = useNavigate();
-  const [errors, setErrors] = useState({
+  const [errors, setErrors] = useState<FormErrors>({
     password: "",
     views: "",
-    expiry: ""
+    expiry: "",
   });
   const [qrName, setQrName] = useState(
     () => sessionStorage.getItem("qrName") || ""
@@ -136,6 +145,14 @@ export default function UploadPage() {
   const [urlValue, setUrlValue] = useState("");
   const [textValue, setTextValue] = useState("");
   const [compressPdf, setCompressPdf] = useState(false);
+  const [enableAccessQuiz, setEnableAccessQuiz] = useState(false);
+  const [quizQuestion, setQuizQuestion] = useState("");
+  const [quizAnswer, setQuizAnswer] = useState("");
+  const [enableDelayedAccess, setEnableDelayedAccess] = useState(false);
+  const [delayedAccessValue, setDelayedAccessValue] = useState("");
+  const [delayedAccessType, setDelayedAccessType] = useState<
+    "minutes" | "hours" | "days"
+  >("hours");
   const [lastQR, setLastQR] = useState(() => {
     const data = sessionStorage.getItem("lastQR");
     return data ? JSON.parse(data) : null;
@@ -203,32 +220,41 @@ export default function UploadPage() {
   }, [type]);
 
   // After successful QR generation, store QR and form hash
-<<<<<<< HEAD
-  const handleGenerateAndContinue = async () => {
-=======
   const handleGenerateAndContinue = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
-    const newErrors = { password: "", views: "", expiry: "" };
+    const newErrors: FormErrors = {
+      password: "",
+      views: "",
+      expiry: "",
+    };
 
-    if (passwordProtect && !isValidPassword(password)) {
-      newErrors.password = "Password must be at least 8 characters and include uppercase, lowercase, number, and special character";
+    if (passwordProtect && password && !isValidPassword(password)) {
+      newErrors.password =
+        "Password must be at least 8 characters and include uppercase, lowercase, number, and special character";
     }
-    if (selfDestruct && destructViews && !isPositiveNumber(Number(viewsValue))) {
+
+    if (
+      selfDestruct &&
+      destructViews &&
+      !isPositiveNumber(Number(viewsValue))
+    ) {
       newErrors.views = "Value must be greater than 0";
     }
-    if (selfDestruct && destructTime && !isPositiveNumber(Number(timeValue))) {
+    if (
+      selfDestruct &&
+      destructTime &&
+      !isPositiveNumber(Number(timeValue))
+    ) {
       newErrors.expiry = "Value must be greater than 0";
     }
 
     setErrors(newErrors);
 
     if (newErrors.password || newErrors.views || newErrors.expiry) {
-      // ⛔ STOP SUBMISSION
+      // Stop submission if there are validation errors
       return;
     }
-
->>>>>>> 43c0bd3 (fix: add input sanitization and validation for password, views and time)
     if (type === "url") {
       if (!urlValue || !/^https?:\/\//.test(urlValue)) {
         toast.error("Please enter a valid http:// or https:// link");
@@ -315,12 +341,7 @@ export default function UploadPage() {
         toast.error("Please enter a name for your QR code");
         return;
       }
-      if (viewsValue && !isPositiveNumber(Number(viewsValue))) {
-  newErrors.views = "Must be greater than 0";
-}
-if (timeValue && !isPositiveNumber(Number(timeValue))) {
-  newErrors.expiry = "Must be greater than 0";
-}
+  
 
       const formData = new FormData();
       formData.append("textContent", textValue);
@@ -503,70 +524,63 @@ if (timeValue && !isPositiveNumber(Number(timeValue))) {
     setSelfDestruct(checked === true);
   };
 
-<<<<<<< HEAD
   const handleViewsValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (value === "" || !isNaN(Number(value))) {
-      setViewsValue(value);
+    if (!/^\d*$/.test(value)) return;
+    setViewsValue(value);
+    const num = Number(value);
+    if (!isPositiveNumber(num)) {
+      setErrors((prev) => ({
+        ...prev,
+        views: "Value must be greater than 0",
+      }));
+    } else {
+      setErrors((prev) => ({ ...prev, views: "" }));
     }
   };
 
   const handleTimeValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (value === "" || !isNaN(Number(value))) {
-      setTimeValue(value);
+    if (!/^\d*$/.test(value)) return;
+    setTimeValue(value);
+    const num = Number(value);
+    if (!isPositiveNumber(num)) {
+      setErrors((prev) => ({
+        ...prev,
+        expiry: "Value must be greater than 0",
+      }));
+    } else {
+      setErrors((prev) => ({ ...prev, expiry: "" }));
     }
   };
-=======
- const handleViewsValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const value = e.target.value;
-  if (!/^\d*$/.test(value)) return;
-  setViewsValue(value);
-  const num = Number(value);
-  if (!isPositiveNumber(num)) {
-    setErrors(prev => ({ ...prev, views: "Value must be greater than 0" }));
-  } else {
-    setErrors(prev => ({ ...prev, views: "" }));
-  }
-};
-
-const handleTimeValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const value = e.target.value;
-  if (!/^\d*$/.test(value)) return;
-  setTimeValue(value);
-  const num = Number(value);
-  if (!isPositiveNumber(num)) {
-    setErrors(prev => ({ ...prev, expiry: "Value must be greater than 0" }));
-  } else {
-    setErrors(prev => ({ ...prev, expiry: "" }));
-  }
-};
->>>>>>> 43c0bd3 (fix: add input sanitization and validation for password, views and time)
 
 const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  setPassword(sanitizeInput(e.target.value));
-  if (passwordProtect && !isValidPassword(e.target.value)) {
-    setErrors(prev => ({
-      ...prev,
-      password: "Password must be at least 8 characters and include uppercase, lowercase, number, and special character"
-    }));
-  } else {
-    setErrors(prev => ({ ...prev, password: "" }));
+  const value = e.target.value;
+  setPassword(value);
+
+  let error = "";
+
+  if (value && !isValidPassword(value)) {
+    error =
+      "Password must be at least 8 characters and include uppercase, lowercase, number, and special character";
   }
+
+  setErrors(prev => ({
+    ...prev,
+    password: error
+  }));
 };
 
 const handlePasswordProtectChange = (checked: boolean | "indeterminate") => {
   setPasswordProtect(checked === true);
-  if (!checked) setErrors(prev => ({ ...prev, password: "" }));
+  if (!checked) {
+    setPassword("");
+    setErrors(prev => ({ ...prev, password: "" }));
+  }
 };
-const isStrongPassword = (password: string) => {
-  const regex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&]).{8,}$/;
-  return regex.test(password);
-};
-if (password && !isStrongPassword(password)) {
-  errors.password =
-    "Password must be at least 8 characters and include uppercase, lowercase, number and special character";
-}
+
+// Removed duplicate isStrongPassword, use isValidPassword everywhere
+
 // Add file size constraints
   const MAX_SIZE_MB = type === "video" ? 100 : 10;
 
@@ -589,20 +603,24 @@ if (password && !isStrongPassword(password)) {
 
   const handleQrNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setQrName(sanitizeInput(value));
+    setQrName(sanitizeQrName(value));
   };
 
-  const canGenerate =
-    qrName.trim() &&
-    (type === "url"
-      ? urlValue.trim()
-      : type === "text"
-        ? textValue.trim()
-        : uploadedFile) &&
-    (!passwordProtect || password.trim()) &&
+  // Step calculation logic
+  const hasContent =
+    (type === "url" && urlValue.trim()) ||
+    (type === "text" && textValue.trim()) ||
+    (type !== "url" && type !== "text" && uploadedFile);
+
+  const hasValidName = qrName.trim().length > 0;
+
+  const hasValidSecurity =
+    (!passwordProtect || (password.trim() && isValidPassword(password))) &&
     (!selfDestruct ||
       (destructViews && viewsValue.trim()) ||
       (destructTime && timeValue.trim()));
+
+  const canGenerate = Boolean(hasContent && hasValidName && hasValidSecurity);
 
   // Add this useEffect after state declarations
   useEffect(() => {
@@ -632,7 +650,7 @@ if (password && !isStrongPassword(password)) {
       <main className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 max-w-4xl">
         <div className="bg-card rounded-3xl shadow-lg p-6 sm:p-10 space-y-8 sm:space-y-12 border border-border">
           {/* Step Indicator */}
-          <div className="flex items-center justify-between mb-8 sm:mb-12">
+          <div className="flex items-center justify_between mb-8 sm:mb-12">
             <span className="text-xs sm:text-sm text-primary font-semibold bg-primary/10 px-4 py-2 rounded-full">
               Step 2 of 3
             </span>
@@ -651,13 +669,24 @@ if (password && !isStrongPassword(password)) {
               <div className="w-3 h-3 bg-primary rounded-full"></div>
               Name your QR Code
             </Label>
-            <Input
-              id="qr-name"
-              placeholder="Enter a memorable name..."
-              value={qrName}
-              onChange={handleQrNameChange}
-              className="input-focus text-base rounded-xl border-border bg-background h-14 px-6 font-medium text-lg focus-ring"
-            />
+            <div className="relative">
+              <Input
+                id="qr-name"
+                placeholder="Enter a memorable name..."
+                value={qrName}
+                onChange={handleQrNameChange}
+                className="input-focus rounded-xl border-border bg-background h-14 px-6 pr-12 font-medium text-lg focus-ring"
+              />
+              {qrName && (
+                <button
+                  onClick={() => setQrName("")}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground focus-ring"
+                  aria-label="Clear name"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Content Input */}
@@ -671,14 +700,25 @@ if (password && !isStrongPassword(password)) {
                 <Link className="h-5 w-5 text-blue-500" />
                 Enter URL
               </Label>
-              <Input
-                id="url"
-                type="url"
-                value={urlValue}
-                onChange={(e) => setUrlValue(e.target.value)}
-                placeholder="https://example.com"
-                className="input-focus text-base rounded-xl border-border bg-background h-14 px-6 text-lg focus-ring"
-              />
+              <div className="relative">
+                <Input
+                  id="url"
+                  type="url"
+                  value={urlValue}
+                  onChange={(e) => setUrlValue(e.target.value)}
+                  placeholder="https://example.com"
+                  className="input-focus rounded-xl border-border bg-background h-14 px-6 pr-12 text-lg focus-ring"
+                />
+                {urlValue && (
+                  <button
+                    onClick={() => setUrlValue("")}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground focus-ring"
+                    aria-label="Clear URL"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                )}
+              </div>
               <p className="text-sm text-muted-foreground pl-6">
                 {TYPE_MESSAGES[type]}
               </p>
@@ -693,22 +733,11 @@ if (password && !isStrongPassword(password)) {
                 <TypeIcon className="h-5 w-5 text-yellow-500" />
                 Enter Text
               </Label>
-<<<<<<< HEAD
-              <textarea
-                id="text"
-                value={textValue}
-                onChange={(e) => setTextValue(e.target.value)}
-                placeholder="Enter your text content here..."
-                className="w-full min-h-[140px] p-6 text-base rounded-xl border border-border bg-background text-foreground resize-vertical transition-all duration-200 focus:border-primary/50 focus:ring-2 focus:ring-primary/10 focus-ring"
-                rows={6}
-                maxLength={10000}
-              />
-=======
               <div className="relative">
                 <textarea
                   id="text"
                   value={textValue}
-                  onChange={(e) => setTextValue(sanitizeInput(e.target.value))}
+                  onChange={(e) => setTextValue(e.target.value)}
                   placeholder="Enter your text content here..."
                   className="w-full min-h-[140px] p-6 pr-12 text-base rounded-xl border border-border bg-background text-foreground resize-vertical transition-all duration-200 focus:border-primary/50 focus:ring-2 focus:ring-primary/10 focus-ring"
                   rows={6}
@@ -724,7 +753,6 @@ if (password && !isStrongPassword(password)) {
                   </button>
                 )}
               </div>
->>>>>>> 43c0bd3 (fix: add input sanitization and validation for password, views and time)
               <div className="flex justify-between items-center px-2">
                 <p className="text-sm text-muted-foreground">
                   {TYPE_MESSAGES[type]}
@@ -855,25 +883,20 @@ if (password && !isStrongPassword(password)) {
                   {destructViews && (
                     <div className="pl-8">
                       <Input
-<<<<<<< HEAD
                         type="number"
+                        min={1}
                         placeholder="Number of views"
                         value={viewsValue}
                         onChange={handleViewsValueChange}
-                        className="input-focus rounded-xl border-border bg-background h-12 focus-ring"
+                        className={`input-focus rounded-xl border-border bg-background h-12 focus-ring ${
+                          errors.views ? "border-destructive" : ""
+                        }`}
                       />
-=======
-  type="number"
-  min={1}
-  placeholder="Number of views"
-  value={viewsValue}
-  onChange={handleViewsValueChange}
-  className={`input-focus rounded-xl border-border bg-background h-12 focus-ring ${errors.views ? 'border-destructive' : ''}`}
-/>
-{errors.views && (
-  <p className="text-red-500 text-sm mt-1">{errors.views}</p>
-)}
->>>>>>> 43c0bd3 (fix: add input sanitization and validation for password, views and time)
+                      {errors.views && (
+                        <p className="text-red-500 text-sm mt-1">
+                          {errors.views}
+                        </p>
+                      )}
                     </div>
                   )}
 
@@ -888,7 +911,7 @@ if (password && !isStrongPassword(password)) {
                     />
                     <Label
                       htmlFor="destruct-time"
-                      className="text-base font-medium text-foreground cursor-pointer flex items-center gap-3"
+                      className="text-base font-medium text-foreground cursor-pointer flex items_center gap-3"
                     >
                       <Clock className="h-5 w-5 text-orange-500" />
                       After Time
@@ -898,25 +921,20 @@ if (password && !isStrongPassword(password)) {
                   {destructTime && (
                     <div className="pl-8">
                       <Input
-<<<<<<< HEAD
                         type="number"
+                        min={1}
                         placeholder="Hours until expiration"
                         value={timeValue}
                         onChange={handleTimeValueChange}
-                        className="input-focus rounded-xl border-border bg-background h-12 focus-ring"
+                        className={`input-focus rounded-xl border-border bg-background h-12 focus-ring ${
+                          errors.expiry ? "border-destructive" : ""
+                        }`}
                       />
-=======
-  type="number"
-  min={1}
-  placeholder="Hours until expiration"
-  value={timeValue}
-  onChange={handleTimeValueChange}
-  className={`input-focus rounded-xl border-border bg-background h-12 focus-ring ${errors.expiry ? 'border-destructive' : ''}`}
-/>
-{errors.expiry && (
-  <p className="text-red-500 text-sm mt-1">{errors.expiry}</p>
-)}
->>>>>>> 43c0bd3 (fix: add input sanitization and validation for password, views and time)
+                      {errors.expiry && (
+                        <p className="text-red-500 text-sm mt-1">
+                          {errors.expiry}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -924,9 +942,6 @@ if (password && !isStrongPassword(password)) {
             </div>
           </div>
 
-<<<<<<< HEAD
-          {/* Generate Button */}
-=======
           {/* Access Quiz */}
           <div className="space-y-8 border-t border-border pt-8">
             <h3 className="text-2xl font-bold text-foreground flex items-center gap-3">
@@ -1072,7 +1087,7 @@ if (password && !isStrongPassword(password)) {
               )}
             </div>
           </div>
->>>>>>> 43c0bd3 (fix: add input sanitization and validation for password, views and time)
+
           <div className="pt-8">
             <Button
               onClick={handleGenerateAndContinue}
