@@ -82,8 +82,16 @@ export default function ViewZap() {
           `${import.meta.env.VITE_BACKEND_URL}/api/zaps/${shortId}`
         );
 
+
         if (response.data?.url) {
+
+        // If successful, the backend will redirect or serve the file.
+        if (response.data && response.data.url) {
+
           window.location.href = response.data.url;
+        } else {
+          setError("File URL not available.");
+          setLoading(false);
         }
       } catch (err) {
         const error = err as AxiosError<{ message: string }>;
@@ -108,7 +116,6 @@ export default function ViewZap() {
         } else {
           setError("An unexpected error occurred. Please try again later.");
         }
-      } finally {
         setLoading(false);
       }
     };

@@ -15,12 +15,12 @@ export function useScrollRestoration(
 
   // Save scroll position when navigating away
   useEffect(() => {
+    const currentContainer = containerRef.current;
     const currentPath = pathRef.current;
 
     return () => {
-      const el = containerRef.current;
-      if (el) {
-        scrollPositions.set(currentPath, el.scrollTop);
+      if (currentContainer) {
+        scrollPositions.set(currentPath, currentContainer.scrollTop);
       }
     };
   }, [containerRef]);
