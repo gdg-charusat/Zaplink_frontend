@@ -56,7 +56,12 @@ export default function Scan() {
       // If it's a URL, we can redirect. Otherwise, just show the text or navigate.
       try {
         const url = new URL(data);
-        window.location.href = url.href;
+        if (url.protocol === "http:" || url.protocol === "https:") {
+          window.location.href = url.href;
+        } else {
+          toast.error("Invalid URL protocol. Only http and https are allowed.");
+          setScanState("idle");
+        }
       } catch {
         // Not a valid URL, maybe just text
         toast.info(`Decoded text: ${data}`);
@@ -103,8 +108,12 @@ export default function Scan() {
   const getCameras = async () => {
     try {
       // Need to ask for permission first to get labels
-      await navigator.mediaDevices.getUserMedia({ video: true });
+      const tempStream = await navigator.mediaDevices.getUserMedia({ video: true });
       const devices = await navigator.mediaDevices.enumerateDevices();
+
+      // Stop the temporary stream immediately after getting labels
+      tempStream.getTracks().forEach(track => track.stop());
+
       const videoDevices = devices.filter(device => device.kind === "videoinput");
       setCameras(videoDevices);
 

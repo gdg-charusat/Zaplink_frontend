@@ -1,13 +1,23 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Loader2, Shield, Clock, Eye, Zap, FileText, Link, Type as TypeIcon } from "lucide-react";
+import axios, { AxiosError } from "axios";
+import {
+  Loader2,
+  Shield,
+  Clock,
+  Eye,
+  Zap,
+  FileText,
+  Link,
+  Type as TypeIcon,
+  X,
+} from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
 import { Button } from "./ui/button";
 import { toast } from "sonner";
 import { uploadZap, type ApiError } from "../services/api";
-import axios, { AxiosError } from "axios";
 import { Switch } from "./ui/switch";
 import FileUpload from "./FileUpload";
 
@@ -121,32 +131,6 @@ export default function UploadPage() {
   const [timeValue, setTimeValue] = useState(
     () => sessionStorage.getItem("timeValue") || ""
   );
-  const [enableAccessQuiz, setEnableAccessQuiz] = useState(() => {
-    try {
-      return JSON.parse(sessionStorage.getItem("enableAccessQuiz") || "false");
-    } catch {
-      return false;
-    }
-  });
-  const [quizQuestion, setQuizQuestion] = useState(
-    () => sessionStorage.getItem("quizQuestion") || "",
-  );
-  const [quizAnswer, setQuizAnswer] = useState(
-    () => sessionStorage.getItem("quizAnswer") || "",
-  );
-  const [enableDelayedAccess, setEnableDelayedAccess] = useState(() => {
-    try {
-      return JSON.parse(sessionStorage.getItem("enableDelayedAccess") || "false");
-    } catch {
-      return false;
-    }
-  });
-  const [delayedAccessValue, setDelayedAccessValue] = useState(
-    () => sessionStorage.getItem("delayedAccessValue") || "",
-  );
-  const [delayedAccessType, setDelayedAccessType] = useState<"minutes" | "hours" | "days">(
-    () => (sessionStorage.getItem("delayedAccessType") as any) || "minutes",
-  );
   const [loading, setLoading] = useState(false);
   const [type, setType] = useState<FileType>(initialType);
   const [urlValue, setUrlValue] = useState("");
@@ -201,6 +185,7 @@ export default function UploadPage() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
+
 
   // Reset form state when file type changes
   useEffect(() => {
@@ -415,6 +400,7 @@ export default function UploadPage() {
         formData.append("expiresAt", expirationTime.toISOString());
       }
     }
+
 
     try {
       setLoading(true);

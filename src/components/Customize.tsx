@@ -8,6 +8,11 @@ import {
   Share2,
   Sparkles,
   Check,
+  Palette,
+  X,
+  Shield,
+  Clock,
+  Eye,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "./ui/button";
@@ -368,7 +373,7 @@ export default function CustomizePage() {
                         </>
                       ) : (
                         <>
-                          <Copy className="h-4 w-4 mr-2" />
+                          <Check className="h-4 w-4 mr-2" />
                           <span className="hidden sm:inline">Copy Link</span>
                           <span className="sm:hidden">Copy</span>
                         </>

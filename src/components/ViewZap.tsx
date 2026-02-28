@@ -131,7 +131,7 @@ export default function ViewZap() {
         state: { ...location.state, passwordRequired: true },
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line
   }, [passwordRequired]);
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {

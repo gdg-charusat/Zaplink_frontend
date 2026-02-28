@@ -1,26 +1,11 @@
-import { createContext, useContext, useEffect, useState } from "react";
-
-type Theme = "dark" | "light";
+import { useEffect, useState } from "react";
+import { ThemeProviderContext, type Theme, type ThemeProviderState } from "./theme-context";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
   defaultTheme?: Theme;
   storageKey?: string;
 };
-
-type ThemeProviderState = {
-  theme: Theme;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  setTheme: (theme: Theme | ((theme: Theme) => Theme)) => void;
-  applySystemTheme: () => void;
-};
-
-// REMOVED INITIAL STATE
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const ThemeProviderContext = createContext<ThemeProviderState | undefined>(
-  undefined
-);
 
 export function ThemeProvider({
   children,
@@ -45,8 +30,8 @@ export function ThemeProvider({
           ? "dark"
           : "light";
       }
-    } catch {
-      // empty 
+    } catch (e) {
+      console.warn("Theme detection failed:", e);
     }
     return defaultTheme;
   };
@@ -73,20 +58,19 @@ export function ThemeProvider({
     try {
       localStorage.setItem(storageKey, sys);
       localStorage.setItem(explicitKey, "false");
-    } catch {
-      // empty 
+    } catch (e) {
+      console.warn("Theme storage failed:", e);
     }
     setExplicit(false);
     setThemeState(sys);
   };
 
-  const setTheme = (t: Theme | ((theme: Theme) => Theme)) => {
+  const setTheme = (t: Theme) => {
     try {
-      const newTheme = typeof t === "function" ? t(theme) : t;
-      localStorage.setItem(storageKey, newTheme);
+      localStorage.setItem(storageKey, t);
       localStorage.setItem(explicitKey, "true");
-    } catch {
-      // empty 
+    } catch (e) {
+      console.warn("Theme storage failed:", e);
     }
     setExplicit(true);
     setThemeState(t);
@@ -104,19 +88,19 @@ export function ThemeProvider({
       // old and new API support
       if (mq.addEventListener) mq.addEventListener("change", handler);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      else mq.addListener(handler as any);
+      else (mq as any).addListener(handler);
 
       return () => {
         if (mq.removeEventListener) mq.removeEventListener("change", handler);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        else mq.removeListener(handler as any);
+        else (mq as any).removeListener(handler);
       };
     } catch {
       return;
     }
   }, [explicit]);
 
-  const value = {
+  const value: ThemeProviderState = {
     theme,
     setTheme,
     applySystemTheme,
@@ -128,13 +112,3 @@ export function ThemeProvider({
     </ThemeProviderContext.Provider>
   );
 }
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const useTheme = () => {
-  const context = useContext(ThemeProviderContext);
-
-  if (context === undefined)
-    throw new Error("useTheme must be used within a ThemeProvider");
-
-  return context;
-};
