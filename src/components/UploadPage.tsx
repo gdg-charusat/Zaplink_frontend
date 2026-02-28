@@ -626,35 +626,7 @@ export default function UploadPage() {
     }
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > MAX_SIZE_BYTES) {
-      toast.error(
-        `${type.charAt(0).toUpperCase() + type.slice(1)
-        } files must be ≤${MAX_SIZE_MB}MB.`,
-      );
-      e.target.value = "";
-      return;
-    }
-    if (type === "pdf" && compressPdf) {
-      // Placeholder: compress PDF client-side
-      // const compressed = await compressPDF(file, 10 * 1024 * 1024);
-      // setUploadedFile(compressed);
-      toast.info(
-        "PDF compression is not yet implemented. Uploading original file.",
-      );
-      setUploadedFile(file);
-      if (!qrName) {
-        setQrName(file.name);
-      }
-    } else {
-      setUploadedFile(file);
-      if (!qrName) {
-        setQrName(file.name);
-      }
-    }
-  };
+  
 
   const handleUploadError = (error: string) => {
     toast.error(error);
