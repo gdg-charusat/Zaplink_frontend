@@ -131,12 +131,11 @@ export default function UploadPage() {
   const [urlValue, setUrlValue] = useState("");
   const [textValue, setTextValue] = useState("");
   const [compressPdf, setCompressPdf] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [enableDelayedAccess, _setEnableDelayedAccess] = useState(false);
-  const [delayedAccessValue, _setDelayedAccessValue] = useState("");
-  const [delayedAccessType, _setDelayedAccessType] = useState<"minutes" | "hours" | "days">("hours");
-  const [enableAccessQuiz, _setEnableAccessQuiz] = useState(false);
-  const [quizQuestion, _setQuizQuestion] = useState("");
+  const [enableDelayedAccess] = useState(false);
+  const [delayedAccessValue] = useState("");
+  const [delayedAccessType] = useState<"minutes" | "hours" | "days">("hours");
+  const [enableAccessQuiz] = useState(false);
+  const [quizQuestion] = useState("");
   const [lastQR, setLastQR] = useState(() => {
     const data = sessionStorage.getItem("lastQR");
     return data ? JSON.parse(data) : null;
