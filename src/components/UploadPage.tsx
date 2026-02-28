@@ -631,6 +631,7 @@ export default function UploadPage() {
 
   // Add file size constraints
   const MAX_SIZE_MB = type === "video" ? 100 : 10;
+  const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
   // Handle files from the FileUpload component
   const handleFilesFromUploader = (files: File[]) => {
@@ -662,17 +663,20 @@ export default function UploadPage() {
     setQrName(value);
   };
 
-  const canGenerate =
-    qrName.trim() &&
-    (type === "url"
-      ? urlValue.trim()
+  const hasContent =
+    type === "url"
+      ? !!urlValue.trim()
       : type === "text"
-        ? textValue.trim()
-        : uploadedFile) &&
-    (!passwordProtect || password.trim()) &&
+        ? !!textValue.trim()
+        : !!uploadedFile;
+
+  const hasValidName = !!qrName.trim();
+
+  const hasValidSecurity =
+    (!passwordProtect || !!password.trim()) &&
     (!selfDestruct ||
-      (destructViews && viewsValue.trim()) ||
-      (destructTime && timeValue.trim()));
+      (destructViews && !!viewsValue.trim()) ||
+      (destructTime && !!timeValue.trim()));
 
   const canGenerate = hasContent && hasValidName && hasValidSecurity;
 
