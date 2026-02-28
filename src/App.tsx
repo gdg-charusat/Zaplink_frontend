@@ -8,19 +8,12 @@ import AboutUs from "./components/AboutUs";
 import ViewZap from "./components/ViewZap";
 import ZapAnalytics from "./components/ZapAnalytics";
 import AnalyticsLookup from "./components/AnalyticsLookup";
-import NotFound from "./pages/NotFound";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import Terms from "./pages/Terms";
 import UrlShortenerPage from "./components/UrlShortenerPage";
 import Dashboard from "./components/Dashboard";
-// import UrlShortenerPage from "./components/UrlShortenerPage";
 import { Analytics } from "@vercel/analytics/react";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ScrollToTop from "./components/ScrollToTop";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import Terms from "./pages/Terms";
-import NotFound from "./pages/NotFound";
 import { validateEnvironment } from "./lib/environment";
 
 
