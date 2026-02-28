@@ -28,7 +28,7 @@ export default function UnsavedChangesDialog({
     onConfirm,
 }: UnsavedChangesDialogProps) {
     return (
-        <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onCancel()}>
+        <Dialog open={open} onOpenChange={(isOpen: boolean) => !isOpen && onCancel()}>
             <DialogContent className="sm:max-w-md" id="unsaved-changes-dialog">
                 <DialogHeader>
                     <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
