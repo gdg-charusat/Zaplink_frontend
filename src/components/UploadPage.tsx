@@ -418,7 +418,6 @@ export default function UploadPage() {
           qrName,
           uploadedFile,
           passwordProtect,
-          password,
           selfDestruct,
           destructViews,
           destructTime,
@@ -511,7 +510,6 @@ export default function UploadPage() {
         qrName,
         uploadedFile,
         passwordProtect,
-        password,
         selfDestruct,
         destructViews,
         destructTime,
@@ -551,18 +549,18 @@ export default function UploadPage() {
   // On form input change, clear lastQR if form hash changes
   useEffect(() => {
     const formHash = getFormDataHash({
-  qrName,
-  uploadedFile,
-  passwordProtect,
-  selfDestruct,
-  destructViews,
-  destructTime,
-  viewsValue,
-  timeValue,
-  urlValue,
-  textValue,
-  type,
-});
+      qrName,
+      uploadedFile,
+      passwordProtect,
+      selfDestruct,
+      destructViews,
+      destructTime,
+      viewsValue,
+      timeValue,
+      urlValue,
+      textValue,
+      type,
+    });
     if (lastQRFormHash && formHash !== lastQRFormHash) {
       sessionStorage.removeItem("lastQR");
       sessionStorage.removeItem("lastQRFormHash");
@@ -573,7 +571,6 @@ export default function UploadPage() {
     qrName,
     uploadedFile,
     passwordProtect,
-    password,
     selfDestruct,
     destructViews,
     destructTime,
@@ -709,8 +706,8 @@ export default function UploadPage() {
         justCompleted === 1
           ? "✓ Content added!"
           : justCompleted === 2
-          ? "✓ Name provided!"
-          : "✓ Ready to generate!",
+            ? "✓ Name provided!"
+            : "✓ Ready to generate!",
         { duration: 2000 }
       );
       setTimeout(() => setStepJustCompleted(null), 2000);
@@ -721,35 +718,35 @@ export default function UploadPage() {
   }, [hasContent, hasValidName, canGenerate]);
 
 
-    // check for last zap in local storage
-    // Restore last zap safely (without restoring password)
-useEffect(() => {
-  const lastZapStr = localStorage.getItem("lastZap");
+  // check for last zap in local storage
+  // Restore last zap safely (without restoring password)
+  useEffect(() => {
+    const lastZapStr = localStorage.getItem("lastZap");
 
-  if (lastZapStr) {
-    try {
-      const lastQR = JSON.parse(lastZapStr);
+    if (lastZapStr) {
+      try {
+        const lastQR = JSON.parse(lastZapStr);
 
-      setQrName(lastQR.name || "");
+        setQrName(lastQR.name || "");
 
-      // 🚫 Never restore password for security reasons
-      setPasswordProtect(false);
-      setPassword("");
+        // 🚫 Never restore password for security reasons
+        setPasswordProtect(false);
+        setPassword("");
 
-      setSelfDestruct(!!lastQR.selfDestruct);
-      setDestructViews(!!lastQR.viewLimit);
-      setDestructTime(!!lastQR.expiresAt);
-      setViewsValue(lastQR.viewLimit ? String(lastQR.viewLimit) : "");
-      setTimeValue(lastQR.expiresAt ? String(lastQR.expiresAt) : "");
-      setUrlValue(lastQR.originalUrl || "");
-      setTextValue(lastQR.textContent || "");
-      setType(lastQR.type ? lastQR.type.toLowerCase() : "pdf");
-    } catch (error) {
-      console.warn("Failed to parse lastZap from localStorage:", error);
-      localStorage.removeItem("lastZap");
+        setSelfDestruct(!!lastQR.selfDestruct);
+        setDestructViews(!!lastQR.viewLimit);
+        setDestructTime(!!lastQR.expiresAt);
+        setViewsValue(lastQR.viewLimit ? String(lastQR.viewLimit) : "");
+        setTimeValue(lastQR.expiresAt ? String(lastQR.expiresAt) : "");
+        setUrlValue(lastQR.originalUrl || "");
+        setTextValue(lastQR.textContent || "");
+        setType(lastQR.type ? lastQR.type.toLowerCase() : "pdf");
+      } catch (error) {
+        console.warn("Failed to parse lastZap from localStorage:", error);
+        localStorage.removeItem("lastZap");
+      }
     }
-  }
-}, []);
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -772,9 +769,8 @@ useEffect(() => {
               <span className="text-xs sm:text-sm text-muted-foreground flex items-center gap-2">
                 {currentStep === 3 ? "Ready!" : "Customize"}
                 <Zap
-                  className={`h-3 w-3 sm:h-4 sm:w-4 transition-all duration-300 ${
-                    currentStep === 3 ? "text-primary animate-pulse" : ""
-                  }`}
+                  className={`h-3 w-3 sm:h-4 sm:w-4 transition-all duration-300 ${currentStep === 3 ? "text-primary animate-pulse" : ""
+                    }`}
                 />
               </span>
             </div>
@@ -796,17 +792,15 @@ useEffect(() => {
                       {/* Step Circle */}
                       <div className="flex items-center gap-2">
                         <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-500 transform ${
-                            isCompleted
-                              ? "bg-primary text-primary-foreground scale-110 shadow-lg"
-                              : isActive
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold text-sm transition-all duration-500 transform ${isCompleted
+                            ? "bg-primary text-primary-foreground scale-110 shadow-lg"
+                            : isActive
                               ? "bg-primary/30 text-primary scale-105 ring-2 ring-primary ring-offset-2 ring-offset-background"
                               : "bg-muted text-muted-foreground"
-                          } ${
-                            stepJustCompleted === step
+                            } ${stepJustCompleted === step
                               ? "animate-bounce"
                               : ""
-                          }`}
+                            }`}
                           style={{
                             animation:
                               stepJustCompleted === step
@@ -822,11 +816,10 @@ useEffect(() => {
                         </div>
                         {/* Step Label - Hidden on mobile for space */}
                         <span
-                          className={`hidden sm:block text-xs font-medium transition-all duration-300 ${
-                            isCompleted || isActive
-                              ? "text-foreground"
-                              : "text-muted-foreground"
-                          }`}
+                          className={`hidden sm:block text-xs font-medium transition-all duration-300 ${isCompleted || isActive
+                            ? "text-foreground"
+                            : "text-muted-foreground"
+                            }`}
                         >
                           {stepLabels[step - 1]}
                         </span>
@@ -835,11 +828,10 @@ useEffect(() => {
                       {step < 3 && (
                         <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
                           <div
-                            className={`h-full transition-all duration-700 ease-out ${
-                              isCompleted
-                                ? "bg-gradient-to-r from-primary via-primary/90 to-primary shadow-sm"
-                                : "bg-transparent"
-                            }`}
+                            className={`h-full transition-all duration-700 ease-out ${isCompleted
+                              ? "bg-gradient-to-r from-primary via-primary/90 to-primary shadow-sm"
+                              : "bg-transparent"
+                              }`}
                             style={{
                               width: isCompleted ? "100%" : "0%",
                             }}
@@ -882,9 +874,8 @@ useEffect(() => {
           >
             <Label className="text-lg font-semibold text-foreground flex items-center gap-3">
               <div
-                className={`w-3 h-3 rounded-full transition-all duration-500 ${
-                  completedSteps.includes(2) ? "bg-primary shadow-lg" : "bg-primary/50"
-                }`}
+                className={`w-3 h-3 rounded-full transition-all duration-500 ${completedSteps.includes(2) ? "bg-primary shadow-lg" : "bg-primary/50"
+                  }`}
               ></div>
               Name your QR Code
               {completedSteps.includes(2) && (
@@ -1320,11 +1311,10 @@ useEffect(() => {
             <Button
               onClick={handleGenerateAndContinue}
               disabled={!canGenerate || loading}
-              className={`w-full h-16 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-semibold text-xl rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 focus-ring ${
-                canGenerate && !loading
-                  ? "animate-pulse-subtle ring-2 ring-primary/30"
-                  : ""
-              }`}
+              className={`w-full h-16 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary text-primary-foreground font-semibold text-xl rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 focus-ring ${canGenerate && !loading
+                ? "animate-pulse-subtle ring-2 ring-primary/30"
+                : ""
+                }`}
             >
               {loading ? (
                 <>
@@ -1350,8 +1340,8 @@ useEffect(() => {
                 {!hasContent
                   ? "📁 Please add content to continue"
                   : !hasValidName
-                  ? "✏️ Please name your QR code"
-                  : "⚙️ Configure security settings if needed"}
+                    ? "✏️ Please name your QR code"
+                    : "⚙️ Configure security settings if needed"}
               </p>
             )}
           </div>
