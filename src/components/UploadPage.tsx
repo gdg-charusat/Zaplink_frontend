@@ -650,7 +650,7 @@ const handlePasswordProtectChange = (checked: boolean | "indeterminate") => {
       <main className="container mx-auto px-4 sm:px-6 py-8 sm:py-12 max-w-4xl">
         <div className="bg-card rounded-3xl shadow-lg p-6 sm:p-10 space-y-8 sm:space-y-12 border border-border">
           {/* Step Indicator */}
-          <div className="flex items-center justify_between mb-8 sm:mb-12">
+          <div className="flex items-center justify-between mb-8 sm:mb-12">
             <span className="text-xs sm:text-sm text-primary font-semibold bg-primary/10 px-4 py-2 rounded-full">
               Step 2 of 3
             </span>
@@ -911,7 +911,7 @@ const handlePasswordProtectChange = (checked: boolean | "indeterminate") => {
                     />
                     <Label
                       htmlFor="destruct-time"
-                      className="text-base font-medium text-foreground cursor-pointer flex items_center gap-3"
+                      className="text-base font-medium text-foreground cursor-pointer flex items-center gap-3"
                     >
                       <Clock className="h-5 w-5 text-orange-500" />
                       After Time
