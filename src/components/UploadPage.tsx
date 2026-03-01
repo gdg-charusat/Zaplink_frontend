@@ -1,16 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { Loader2, Shield, Clock, Eye, Zap, FileText, Link, Type as TypeIcon, X } from "lucide-react";
 import axios, { AxiosError } from "axios";
-import {
-  Loader2,
-  Shield,
-  Clock,
-  Eye,
-  Zap,
-  FileText,
-  Link,
-  Type as TypeIcon,
-} from "lucide-react";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Checkbox } from "./ui/checkbox";
@@ -18,6 +9,14 @@ import { Button } from "./ui/button";
 import { toast } from "sonner";
 import { Switch } from "./ui/switch";
 import FileUpload from "./FileUpload";
+
+// Only trim input. Do NOT modify user content.
+// Validation should be handled separately.
+// Only sanitize for fields where HTML tags are unsafe (e.g., QR name)
+
+const sanitizeQrName = (value: string) => {
+  return value.trim();
+};
 
 type FileType =
   | "image"
@@ -55,6 +54,12 @@ const TYPE_EXTENSIONS: Record<FileType, string[]> = {
   video: [".mp4", ".avi", ".mov", ".wmv", ".flv"],
   url: [],
   text: [],
+};
+
+type FormErrors = {
+  password: string;
+  views: string;
+  expiry: string;
 };
 
 // Add a type for the form data hash function
@@ -101,10 +106,19 @@ function getFormDataHash({
   });
 }
 
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+const isValidPassword = (password: string): boolean => passwordRegex.test(password);
+const isPositiveNumber = (value: number): boolean => Number.isInteger(value) && value > 0;
+
 export default function UploadPage() {
   const location = useLocation();
   const initialType = (location.state?.type as FileType) || "pdf";
   const navigate = useNavigate();
+  const [errors, setErrors] = useState<FormErrors>({
+    password: "",
+    views: "",
+    expiry: "",
+  });
   const [qrName, setQrName] = useState(
     () => sessionStorage.getItem("qrName") || ""
   );
@@ -129,6 +143,14 @@ export default function UploadPage() {
   const [urlValue, setUrlValue] = useState("");
   const [textValue, setTextValue] = useState("");
   const [compressPdf, setCompressPdf] = useState(false);
+  const [enableAccessQuiz, setEnableAccessQuiz] = useState(false);
+  const [quizQuestion, setQuizQuestion] = useState("");
+  const [quizAnswer, setQuizAnswer] = useState("");
+  const [enableDelayedAccess, setEnableDelayedAccess] = useState(false);
+  const [delayedAccessValue, setDelayedAccessValue] = useState("");
+  const [delayedAccessType, setDelayedAccessType] = useState<
+    "minutes" | "hours" | "days"
+  >("hours");
   const [enableDelayedAccess] = useState(false);
   const [delayedAccessValue] = useState("");
   const [delayedAccessType] = useState<"minutes" | "hours" | "days">("hours");
@@ -202,20 +224,40 @@ export default function UploadPage() {
   }, [type]);
 
   // After successful QR generation, store QR and form hash
-  const handleGenerateAndContinue = async () => {
-    // Validate self-destruct views
-    if (selfDestruct && destructViews) {
-      if (!viewsValue.trim() || isNaN(Number(viewsValue)) || Number(viewsValue) < 1) {
-        toast.error("Invalid value for 'After Views'. Please enter a positive integer.");
-        return;
-      }
+  const handleGenerateAndContinue = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
+    const newErrors: FormErrors = {
+      password: "",
+      views: "",
+      expiry: "",
+    };
+
+    if (passwordProtect && password && !isValidPassword(password)) {
+      newErrors.password =
+        "Password must be at least 8 characters and include uppercase, lowercase, number, and special character";
     }
-    // Validate self-destruct time
-    if (selfDestruct && destructTime) {
-      if (!timeValue.trim() || isNaN(Number(timeValue)) || Number(timeValue) < 1) {
-        toast.error("Invalid value for 'After Time'. Please enter a positive integer.");
-        return;
-      }
+
+    if (
+      selfDestruct &&
+      destructViews &&
+      !isPositiveNumber(Number(viewsValue))
+    ) {
+      newErrors.views = "Value must be greater than 0";
+    }
+    if (
+      selfDestruct &&
+      destructTime &&
+      !isPositiveNumber(Number(timeValue))
+    ) {
+      newErrors.expiry = "Value must be greater than 0";
+    }
+
+    setErrors(newErrors);
+
+    if (newErrors.password || newErrors.views || newErrors.expiry) {
+      // Stop submission if there are validation errors
+      return;
     }
     if (type === "url") {
       if (!urlValue || !/^https?:\/\//.test(urlValue)) {
@@ -228,13 +270,13 @@ export default function UploadPage() {
       }
       const formData = new FormData();
       formData.append("originalUrl", urlValue);
-      formData.append("name", qrName);
+      formData.append("name", qrName.trim());
       formData.append("type", "URL");
       if (passwordProtect && password.trim()) {
-        formData.append("password", password);
+        formData.append("password", password.trim());
       }
       if (selfDestruct && destructViews && viewsValue.trim()) {
-        formData.append("viewLimit", viewsValue);
+        formData.append("viewLimit", viewsValue.trim());
       }
       if (selfDestruct && destructTime && timeValue.trim()) {
         const expirationTime = new Date();
@@ -346,6 +388,8 @@ export default function UploadPage() {
         toast.error("Please enter a name for your QR code");
         return;
       }
+  
+
       const formData = new FormData();
       formData.append("textContent", textValue);
       formData.append("name", qrName);
@@ -606,30 +650,68 @@ export default function UploadPage() {
     type,
     lastQRFormHash,
   ]);
-
-  const handlePasswordProtectChange = (checked: boolean | "indeterminate") => {
-    setPasswordProtect(checked === true);
-  };
-
   const handleSelfDestructChange = (checked: boolean | "indeterminate") => {
     setSelfDestruct(checked === true);
   };
 
   const handleViewsValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (value === "" || !isNaN(Number(value))) {
-      setViewsValue(value);
+    if (!/^\d*$/.test(value)) return;
+    setViewsValue(value);
+    const num = Number(value);
+    if (!isPositiveNumber(num)) {
+      setErrors((prev) => ({
+        ...prev,
+        views: "Value must be greater than 0",
+      }));
+    } else {
+      setErrors((prev) => ({ ...prev, views: "" }));
     }
   };
 
   const handleTimeValueChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    if (value === "" || !isNaN(Number(value))) {
-      setTimeValue(value);
+    if (!/^\d*$/.test(value)) return;
+    setTimeValue(value);
+    const num = Number(value);
+    if (!isPositiveNumber(num)) {
+      setErrors((prev) => ({
+        ...prev,
+        expiry: "Value must be greater than 0",
+      }));
+    } else {
+      setErrors((prev) => ({ ...prev, expiry: "" }));
     }
   };
 
-  // Add file size constraints
+const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const value = e.target.value;
+  setPassword(value);
+
+  let error = "";
+
+  if (value && !isValidPassword(value)) {
+    error =
+      "Password must be at least 8 characters and include uppercase, lowercase, number, and special character";
+  }
+
+  setErrors(prev => ({
+    ...prev,
+    password: error
+  }));
+};
+
+const handlePasswordProtectChange = (checked: boolean | "indeterminate") => {
+  setPasswordProtect(checked === true);
+  if (!checked) {
+    setPassword("");
+    setErrors(prev => ({ ...prev, password: "" }));
+  }
+};
+
+// Removed duplicate isStrongPassword, use isValidPassword everywhere
+
+// Add file size constraints
   const MAX_SIZE_MB = type === "video" ? 100 : 10;
   const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
 
@@ -660,9 +742,19 @@ export default function UploadPage() {
 
   const handleQrNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setQrName(value);
+    setQrName(sanitizeQrName(value));
   };
 
+  // Step calculation logic
+  const hasContent =
+    (type === "url" && urlValue.trim()) ||
+    (type === "text" && textValue.trim()) ||
+    (type !== "url" && type !== "text" && uploadedFile);
+
+  const hasValidName = qrName.trim().length > 0;
+
+  const hasValidSecurity =
+    (!passwordProtect || (password.trim() && isValidPassword(password))) &&
   const hasContent =
     type === "url"
       ? !!urlValue.trim()
@@ -683,6 +775,9 @@ export default function UploadPage() {
   // Calculate current step dynamically
   const currentStep = !hasContent ? 1 : !hasValidName ? 2 : canGenerate ? 3 : 2;
 
+  const canGenerate = Boolean(hasContent && hasValidName && hasValidSecurity);
+
+  // Add this useEffect after state declarations
   // Track step completion for animations
   const [completedSteps, setCompletedSteps] = useState<number[]>([]);
   const [stepJustCompleted, setStepJustCompleted] = useState<number | null>(null);
@@ -876,6 +971,24 @@ export default function UploadPage() {
               ></div>
               Name your QR Code
             </Label>
+            <div className="relative">
+              <Input
+                id="qr-name"
+                placeholder="Enter a memorable name..."
+                value={qrName}
+                onChange={handleQrNameChange}
+                className="input-focus rounded-xl border-border bg-background h-14 px-6 pr-12 font-medium text-lg focus-ring"
+              />
+              {qrName && (
+                <button
+                  onClick={() => setQrName("")}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground focus-ring"
+                  aria-label="Clear name"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              )}
+            </div>
             <Input
               id="qr-name"
               placeholder="Enter a memorable name..."
@@ -902,6 +1015,25 @@ export default function UploadPage() {
                 <Link className="h-5 w-5 text-blue-500" />
                 Enter URL
               </Label>
+              <div className="relative">
+                <Input
+                  id="url"
+                  type="url"
+                  value={urlValue}
+                  onChange={(e) => setUrlValue(e.target.value)}
+                  placeholder="https://example.com"
+                  className="input-focus rounded-xl border-border bg-background h-14 px-6 pr-12 text-lg focus-ring"
+                />
+                {urlValue && (
+                  <button
+                    onClick={() => setUrlValue("")}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground focus-ring"
+                    aria-label="Clear URL"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                )}
+              </div>
               <Input
                 id="url"
                 type="url"
@@ -930,15 +1062,26 @@ export default function UploadPage() {
                 <TypeIcon className="h-5 w-5 text-yellow-500" />
                 Enter Text
               </Label>
-              <textarea
-                id="text"
-                value={textValue}
-                onChange={(e) => setTextValue(e.target.value)}
-                placeholder="Enter your text content here..."
-                className="w-full min-h-[140px] p-6 text-base rounded-xl border border-border bg-background text-foreground resize-vertical transition-all duration-200 focus:border-primary/50 focus:ring-2 focus:ring-primary/10 focus-ring"
-                rows={6}
-                maxLength={10000}
-              />
+              <div className="relative">
+                <textarea
+                  id="text"
+                  value={textValue}
+                  onChange={(e) => setTextValue(e.target.value)}
+                  placeholder="Enter your text content here..."
+                  className="w-full min-h-[140px] p-6 pr-12 text-base rounded-xl border border-border bg-background text-foreground resize-vertical transition-all duration-200 focus:border-primary/50 focus:ring-2 focus:ring-primary/10 focus-ring"
+                  rows={6}
+                  maxLength={10000}
+                />
+                {textValue && (
+                  <button
+                    onClick={() => setTextValue("")}
+                    className="absolute right-4 top-6 p-2 hover:bg-muted rounded-full transition-colors text-muted-foreground hover:text-foreground focus-ring"
+                    aria-label="Clear text"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                )}
+              </div>
               <div className="flex justify-between items-center px-2">
                 <p className="text-sm text-muted-foreground">
                   {TYPE_MESSAGES[type]}
@@ -1030,13 +1173,16 @@ export default function UploadPage() {
 
               {passwordProtect && (
                 <div className="pl-10">
-                  <Input
-                    type="password"
-                    placeholder="Enter a secure password..."
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="input-focus rounded-xl border-border bg-background h-12 focus-ring"
-                  />
+                 <Input
+                 type="password"
+  placeholder="Enter a secure password..."
+  value={password}
+  onChange={handlePasswordChange}
+  className={`input-focus rounded-xl border-border bg-background h-12 focus-ring ${errors.password ? 'border-destructive' : ''}`}
+/>
+{errors.password && (
+  <p className="text-red-500 text-sm mt-1">{errors.password}</p>
+)}
                 </div>
               )}
 
@@ -1080,11 +1226,19 @@ export default function UploadPage() {
                     <div className="pl-8">
                       <Input
                         type="number"
+                        min={1}
                         placeholder="Number of views"
                         value={viewsValue}
                         onChange={handleViewsValueChange}
-                        className="input-focus rounded-xl border-border bg-background h-12 focus-ring"
+                        className={`input-focus rounded-xl border-border bg-background h-12 focus-ring ${
+                          errors.views ? "border-destructive" : ""
+                        }`}
                       />
+                      {errors.views && (
+                        <p className="text-red-500 text-sm mt-1">
+                          {errors.views}
+                        </p>
+                      )}
                     </div>
                   )}
 
@@ -1110,11 +1264,19 @@ export default function UploadPage() {
                     <div className="pl-8">
                       <Input
                         type="number"
+                        min={1}
                         placeholder="Hours until expiration"
                         value={timeValue}
                         onChange={handleTimeValueChange}
-                        className="input-focus rounded-xl border-border bg-background h-12 focus-ring"
+                        className={`input-focus rounded-xl border-border bg-background h-12 focus-ring ${
+                          errors.expiry ? "border-destructive" : ""
+                        }`}
                       />
+                      {errors.expiry && (
+                        <p className="text-red-500 text-sm mt-1">
+                          {errors.expiry}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -1122,7 +1284,152 @@ export default function UploadPage() {
             </div>
           </div>
 
-          {/* Generate Button */}
+          {/* Access Quiz */}
+          <div className="space-y-8 border-t border-border pt-8">
+            <h3 className="text-2xl font-bold text-foreground flex items-center gap-3">
+              <Shield className="h-6 w-6 text-blue-500" />
+              Access Quiz (Optional)
+            </h3>
+
+            <div className="space-y-6">
+              <div className="flex items-center space-x-4 p-6 rounded-xl bg-muted/30 border border-border hover:border-blue-500/30 transition-all duration-200">
+                <Checkbox
+                  id="enable-quiz"
+                  checked={enableAccessQuiz}
+                  onCheckedChange={(checked) =>
+                    setEnableAccessQuiz(checked === true)
+                  }
+                  className="data-[state=checked]:bg-blue-500 data-[state=checked]:border-blue-500 w-5 h-5"
+                />
+                <Label
+                  htmlFor="enable-quiz"
+                  className="text-base font-medium text-foreground cursor-pointer flex items-center gap-3"
+                >
+                  <Shield className="h-5 w-5 text-blue-500" />
+                  Protect with Quiz
+                </Label>
+              </div>
+
+              {enableAccessQuiz && (
+                <div className="pl-10 space-y-4">
+                  <div>
+                    <Label
+                      htmlFor="quiz-question"
+                      className="text-base font-medium text-foreground block mb-2"
+                    >
+                      Quiz Question
+                    </Label>
+                    <Input
+                      id="quiz-question"
+                      placeholder="e.g., What is the capital of France?"
+                      value={quizQuestion.trim()}
+                      onChange={(e) => setQuizQuestion(e.target.value)}
+                      className="input-focus rounded-xl border-border bg-background h-12 focus-ring"
+                    />
+                  </div>
+                  <div>
+                    <Label
+                      htmlFor="quiz-answer"
+                      className="text-base font-medium text-foreground block mb-2"
+                    >
+                      Answer (Case-Insensitive)
+                    </Label>
+                    <Input
+                      id="quiz-answer"
+                      type="password"
+                      placeholder="e.g., Paris"
+                      value={quizAnswer}
+                      onChange={(e) => setQuizAnswer(e.target.value)}
+                      className="input-focus rounded-xl border-border bg-background h-12 focus-ring"
+                    />
+                  </div>
+                  <p className="text-sm text-muted-foreground italic">
+                    Users must answer correctly to access the file. Answers are
+                    case-insensitive.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Delayed File Access */}
+          <div className="space-y-8 border-t border-border pt-8">
+            <h3 className="text-2xl font-bold text-foreground flex items-center gap-3">
+              <Clock className="h-6 w-6 text-green-500" />
+              Delayed File Access (Optional)
+            </h3>
+
+            <div className="space-y-6">
+              <div className="flex items-center space-x-4 p-6 rounded-xl bg-muted/30 border border-border hover:border-green-500/30 transition-all duration-200">
+                <Checkbox
+                  id="enable-delayed-access"
+                  checked={enableDelayedAccess}
+                  onCheckedChange={(checked) =>
+                    setEnableDelayedAccess(checked === true)
+                  }
+                  className="data-[state=checked]:bg-green-500 data-[state=checked]:border-green-500 w-5 h-5"
+                />
+                <Label
+                  htmlFor="enable-delayed-access"
+                  className="text-base font-medium text-foreground cursor-pointer flex items-center gap-3"
+                >
+                  <Clock className="h-5 w-5 text-green-500" />
+                  Schedule Access
+                </Label>
+              </div>
+
+              {enableDelayedAccess && (
+                <div className="pl-10 space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label
+                        htmlFor="delayed-value"
+                        className="text-base font-medium text-foreground block mb-2"
+                      >
+                        Unlock After
+                      </Label>
+                      <Input
+                        id="delayed-value"
+                        type="number"
+                        placeholder="e.g., 24"
+                        value={delayedAccessValue}
+                        onChange={(e) => setDelayedAccessValue(e.target.value)}
+                        min="1"
+                        className="input-focus rounded-xl border-border bg-background h-12 focus-ring"
+                      />
+                    </div>
+                    <div>
+                      <Label
+                        htmlFor="delayed-type"
+                        className="text-base font-medium text-foreground block mb-2"
+                      >
+                        Time Unit
+                      </Label>
+                      <select
+                        id="delayed-type"
+                        value={delayedAccessType}
+                        onChange={(e) =>
+                          setDelayedAccessType(
+                            e.target.value as "minutes" | "hours" | "days",
+                          )
+                        }
+                        className="w-full h-12 px-4 rounded-xl border border-border bg-background text-foreground text-base focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all"
+                      >
+                        <option value="minutes">Minutes</option>
+                        <option value="hours">Hours</option>
+                        <option value="days">Days</option>
+                      </select>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground italic">
+                    File will be inaccessible until the specified time. QR code
+                    remains valid but locked.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="pt-8">
             <Button
               onClick={handleGenerateAndContinue}
