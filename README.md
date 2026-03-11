@@ -1,4 +1,4 @@
-# Zaplink — Secure QR Code & File Sharing Platform
+# Zaplink — Secure QR Code & File Sharing Platform-testing
 
 > ⚠️ **IMPORTANT**: This frontend requires a **backend server** running to work properly. See [BACKEND_SETUP.md](BACKEND_SETUP.md) for detailed instructions.
 
