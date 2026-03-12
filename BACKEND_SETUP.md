@@ -1,4 +1,4 @@
-# Backend Setup Guide for Zaplink Frontend
+# Backend Setup Guide for Zaplink Frontend-
 
 > **IMPORTANT**: The Zaplink frontend requires a running backend server to function properly. This guide will help you set it up.
 
